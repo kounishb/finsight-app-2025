@@ -214,7 +214,7 @@ export class AlphaVantageService {
   }
 
   static async getAllNASDAQStocks(): Promise<AlphaVantageStock[]> {
-    const data = await this.makeApiCall('finnhub-stocks', {});
+    const data = await this.makeApiCall('polygon-stocks', {});
     
     if (!data) {
       // Return mock data for development
@@ -243,7 +243,7 @@ export class AlphaVantageService {
   }
 
   static async getLatestNews(): Promise<NewsArticle[]> {
-    const data = await this.makeApiCall('finnhub-news', {});
+    const data = await this.makeApiCall('polygon-news', {});
     
     if (!data) {
       // Return mock data for development
@@ -254,7 +254,7 @@ export class AlphaVantageService {
   }
 
   static async getStockNews(tickers: string[] = []): Promise<NewsArticle[]> {
-    const data = await this.makeApiCall('finnhub-news', { tickers: tickers.join(',') });
+    const data = await this.makeApiCall('polygon-news', { tickers: tickers.join(',') });
     
     if (!data) {
       // Return filtered mock data for development
