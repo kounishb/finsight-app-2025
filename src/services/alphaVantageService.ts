@@ -243,7 +243,7 @@ export class AlphaVantageService {
   }
 
   static async getLatestNews(): Promise<NewsArticle[]> {
-    const data = await this.makeApiCall('polygon-news', {});
+    const data = await this.makeApiCall('marketaux-news', {});
     
     if (!data) {
       // Return mock data for development
@@ -254,7 +254,7 @@ export class AlphaVantageService {
   }
 
   static async getStockNews(tickers: string[] = []): Promise<NewsArticle[]> {
-    const data = await this.makeApiCall('polygon-news', { tickers: tickers.join(',') });
+    const data = await this.makeApiCall('marketaux-news', { tickers: tickers.join(',') });
     
     if (!data) {
       // Return filtered mock data for development
