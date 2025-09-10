@@ -151,38 +151,65 @@ const StockDetail = () => {
   const loadEnhancedStockData = async (stockSymbol: string) => {
     setLoading(true);
     try {
-      // Get enhanced description, recommendation, and metrics from OpenAI
-      const [descriptionRes, recommendationRes, metricsRes] = await Promise.all([
-        supabase.functions.invoke('stock-data-openai', {
-          body: { symbol: stockSymbol, type: 'company-description' }
-        }),
-        supabase.functions.invoke('stock-data-openai', {
-          body: { symbol: stockSymbol, type: 'recommendation' }
-        }),
-        supabase.functions.invoke('stock-data-openai', {
-          body: { symbol: stockSymbol, type: 'stock-metrics' }
-        })
+      // Get enhanced description, recommendation, and metrics from OpenAI with timeout
+      const timeout = (ms: number) => new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), ms)
+      );
+
+      const [descriptionRes, recommendationRes, metricsRes] = await Promise.allSettled([
+        Promise.race([
+          supabase.functions.invoke('stock-data-openai', {
+            body: { symbol: stockSymbol, type: 'company-description' }
+          }),
+          timeout(10000) // 10 second timeout
+        ]),
+        Promise.race([
+          supabase.functions.invoke('stock-data-openai', {
+            body: { symbol: stockSymbol, type: 'recommendation' }
+          }),
+          timeout(10000)
+        ]),
+        Promise.race([
+          supabase.functions.invoke('stock-data-openai', {
+            body: { symbol: stockSymbol, type: 'stock-metrics' }
+          }),
+          timeout(10000)
+        ])
       ]);
 
       const newEnhancedData: any = {};
       
-      if (descriptionRes.data?.content) {
-        newEnhancedData.description = descriptionRes.data.content;
+      // Handle description response
+      if (descriptionRes.status === 'fulfilled') {
+        const result = descriptionRes.value as any;
+        if (result?.data?.content) {
+          newEnhancedData.description = result.data.content;
+        }
       }
       
-      if (recommendationRes.data?.content) {
-        newEnhancedData.recommendation = recommendationRes.data.content;
+      // Handle recommendation response
+      if (recommendationRes.status === 'fulfilled') {
+        const result = recommendationRes.value as any;
+        if (result?.data?.content) {
+          newEnhancedData.recommendation = result.data.content;
+        }
       }
       
-      if (metricsRes.data) {
-        newEnhancedData.volume = metricsRes.data.volume;
-        newEnhancedData.marketCap = metricsRes.data.marketCap;
-        newEnhancedData.peRatio = metricsRes.data.peRatio;
+      // Handle metrics response
+      if (metricsRes.status === 'fulfilled') {
+        const result = metricsRes.value as any;
+        if (result?.data) {
+          newEnhancedData.volume = result.data.volume;
+          newEnhancedData.marketCap = result.data.marketCap;
+          newEnhancedData.peRatio = result.data.peRatio;
+        }
       }
       
       setEnhancedData(newEnhancedData);
     } catch (error) {
       console.error('Error loading enhanced stock data:', error);
+      // Set empty enhanced data so loading stops
+      setEnhancedData({});
     } finally {
       setLoading(false);
     }

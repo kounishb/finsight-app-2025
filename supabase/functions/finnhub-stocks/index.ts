@@ -16,38 +16,47 @@ serve(async (req) => {
       throw new Error('Finnhub API key not configured');
     }
 
-    // Get ALL NASDAQ stock symbols
-    const symbolsResponse = await fetch(`https://finnhub.io/api/v1/stock/symbol?exchange=NASDAQ&token=${API_KEY}`);
+    // Get ALL NYSE and NASDAQ stock symbols
+    const [nasdaqResponse, nyseResponse] = await Promise.all([
+      fetch(`https://finnhub.io/api/v1/stock/symbol?exchange=NASDAQ&token=${API_KEY}`),
+      fetch(`https://finnhub.io/api/v1/stock/symbol?exchange=NYSE&token=${API_KEY}`)
+    ]);
     
-    if (!symbolsResponse.ok) {
-      throw new Error(`Finnhub API error: ${symbolsResponse.status}`);
+    if (!nasdaqResponse.ok || !nyseResponse.ok) {
+      throw new Error(`Finnhub API error: NASDAQ ${nasdaqResponse.status}, NYSE ${nyseResponse.status}`);
     }
 
-    const symbolsData = await symbolsResponse.json();
+    const [nasdaqData, nyseData] = await Promise.all([
+      nasdaqResponse.json(),
+      nyseResponse.json()
+    ]);
+
+    const symbolsData = [...nasdaqData, ...nyseData];
     
-    // Filter for common stocks only (but keep ALL NASDAQ stocks)
-    const allNasdaqStocks = symbolsData
+    // Filter for common stocks only (keep ALL NYSE and NASDAQ stocks)
+    const allStocks = symbolsData
       .filter((stock: any) => 
         stock.type === 'Common Stock' && 
         stock.symbol && 
         !stock.symbol.includes('.') && 
         !stock.symbol.includes('-') && // Avoid preferred shares
-        stock.symbol.length <= 6
+        stock.symbol.length <= 6 &&
+        stock.symbol.match(/^[A-Z]+$/) // Only letters, no numbers
       );
 
-    console.log(`Found ${allNasdaqStocks.length} NASDAQ stocks total`);
+    console.log(`Found ${allStocks.length} total stocks (NYSE + NASDAQ)`);
 
     const stocks = [];
     
-    // Process ALL stocks but with rate limiting for free tier
-    // Free tier: 60 calls/minute, so we can do about 50 calls safely
-    const batchSize = 50;
-    const processed = Math.min(allNasdaqStocks.length, batchSize);
+    // For better performance, process popular stocks first and return more stocks
+    // We'll process up to 200 stocks for better coverage
+    const batchSize = 200;
+    const processed = Math.min(allStocks.length, batchSize);
     
-    console.log(`Processing first ${processed} NASDAQ stocks`);
+    console.log(`Processing first ${processed} stocks from NYSE and NASDAQ`);
     
     for (let i = 0; i < processed; i++) {
-      const stock = allNasdaqStocks[i];
+      const stock = allStocks[i];
       
       try {
         // Get quote data
@@ -73,9 +82,9 @@ serve(async (req) => {
           }
         }
         
-        // Rate limiting - 1.2 seconds between calls to stay within 60/minute limit
+        // Rate limiting - 0.4 seconds between calls (150/minute limit for paid plans)
         if (i < processed - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1200));
+          await new Promise(resolve => setTimeout(resolve, 400));
         }
         
       } catch (error) {
@@ -85,8 +94,8 @@ serve(async (req) => {
     }
 
     // Log information about remaining stocks for future enhancement
-    if (allNasdaqStocks.length > batchSize) {
-      console.log(`Note: ${allNasdaqStocks.length - batchSize} more NASDAQ stocks available. Consider implementing pagination or caching.`);
+    if (allStocks.length > batchSize) {
+      console.log(`Note: ${allStocks.length - batchSize} more NYSE/NASDAQ stocks available. Consider implementing pagination or caching.`);
     }
 
     console.log(`Fetched data for ${stocks.length} stocks`);

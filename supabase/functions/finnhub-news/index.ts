@@ -24,16 +24,16 @@ serve(async (req) => {
     if (tickers.length > 0) {
       // Get company-specific news for each ticker
       const to = new Date().toISOString().split('T')[0];
-      const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Last 7 days
       
-      const newsPromises = tickers.slice(0, 5).map(async (ticker: string) => {
+      const newsPromises = tickers.slice(0, 10).map(async (ticker: string) => {
         try {
           const response = await fetch(
             `https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${from}&to=${to}&token=${API_KEY}`
           );
           if (response.ok) {
             const companyNews = await response.json();
-            return companyNews.slice(0, 10);
+            return companyNews.slice(0, 5); // Get 5 articles per ticker
           }
           return [];
         } catch (error) {
@@ -45,7 +45,7 @@ serve(async (req) => {
       const allCompanyNews = await Promise.all(newsPromises);
       newsData = allCompanyNews.flat();
     } else {
-      // Get financial/business market news only
+      // Get general market news
       const response = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${API_KEY}`);
       
       if (!response.ok) {
@@ -73,7 +73,7 @@ serve(async (req) => {
         const content = (article.headline + ' ' + article.summary).toLowerCase();
         return financialKeywords.some(keyword => content.includes(keyword));
       })
-      .slice(0, 20)
+      .slice(0, 50) // Increased from 20 to 50 for more news coverage
       .map((article: any) => ({
         title: article.headline,
         url: article.url,
