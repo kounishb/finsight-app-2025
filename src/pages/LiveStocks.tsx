@@ -182,6 +182,7 @@ const LiveStocks = () => {
                   <div>
                     <div className="font-semibold text-foreground">{stock.symbol}</div>
                     <div className="text-sm text-muted-foreground truncate max-w-[150px]">{stock.name}</div>
+                    <div className="text-xs text-muted-foreground">Close: ${(stock as any).close?.toFixed(2) || stock.price.toFixed(2)}</div>
                   </div>
                 </div>
               </div>

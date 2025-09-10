@@ -9,6 +9,10 @@ export interface AlphaVantageStock {
   volume?: string;
   marketCap?: string;
   peRatio?: string;
+  close?: number;
+  open?: number;
+  high?: number;
+  low?: number;
 }
 
 export interface NewsArticle {
@@ -37,11 +41,11 @@ export interface NewsArticle {
 
 // Mock data for development
 const MOCK_STOCKS: AlphaVantageStock[] = [
-  { symbol: "AAPL", name: "Apple Inc.", price: 175.45, change: 2.34, changePercent: 1.35 },
-  { symbol: "MSFT", name: "Microsoft Corporation", price: 378.92, change: -1.23, changePercent: -0.32 },
-  { symbol: "GOOGL", name: "Alphabet Inc.", price: 134.87, change: 0.95, changePercent: 0.71 },
-  { symbol: "AMZN", name: "Amazon.com Inc.", price: 145.32, change: 3.21, changePercent: 2.26 },
-  { symbol: "NVDA", name: "NVIDIA Corporation", price: 785.43, change: 15.67, changePercent: 2.03 },
+  { symbol: "AAPL", name: "Apple Inc.", price: 175.45, change: 2.34, changePercent: 1.35, close: 175.45 },
+  { symbol: "MSFT", name: "Microsoft Corporation", price: 378.92, change: -1.23, changePercent: -0.32, close: 378.92 },
+  { symbol: "GOOGL", name: "Alphabet Inc.", price: 134.87, change: 0.95, changePercent: 0.71, close: 134.87 },
+  { symbol: "AMZN", name: "Amazon.com Inc.", price: 145.32, change: 3.21, changePercent: 2.26, close: 145.32 },
+  { symbol: "NVDA", name: "NVIDIA Corporation", price: 785.43, change: 15.67, changePercent: 2.03, close: 785.43 },
   { symbol: "TSLA", name: "Tesla Inc.", price: 234.56, change: -4.32, changePercent: -1.81 },
   { symbol: "META", name: "Meta Platforms Inc.", price: 487.23, change: 7.89, changePercent: 1.65 },
   { symbol: "NFLX", name: "Netflix Inc.", price: 567.89, change: 12.34, changePercent: 2.22 },
