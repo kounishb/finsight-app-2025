@@ -344,13 +344,13 @@ const Recommend = () => {
                   </div>
                 </div>
                 
-                <div className="text-sm text-muted-foreground">
-                  {stock.description}
-                </div>
-                
                 <div className="text-sm bg-accent/20 p-3 rounded-lg">
                   <div className="font-semibold text-foreground mb-1">Why we recommend this:</div>
-                  <div className="text-muted-foreground">{stock.reason.split('\n\nDisclaimer:')[0]}</div>
+                  <div className="text-muted-foreground">
+                    {/* Show only first sentence or up to 120 characters as summary */}
+                    {stock.reason.split('.')[0].substring(0, 120)}
+                    {stock.reason.length > 120 ? '...' : '.'}
+                  </div>
                 </div>
                 
                 <div className="text-center pt-2">
