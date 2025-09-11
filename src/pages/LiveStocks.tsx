@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TrendingUp, TrendingDown, Search, BarChart3, Filter, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { nyseStocks } from "@/data/nyseStocks";
-import { AlphaVantageService, AlphaVantageStock } from "@/services/alphaVantageService";
+import { polygonService, PolygonStock } from "@/services/polygonService";
 
 const marketIndices = [
   { name: "S&P 500", value: "4,567.89", change: 0.7 },
@@ -19,7 +19,7 @@ const LiveStocks = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<"all">("all");
   const [sortBy, setSortBy] = useState<"alphabetical" | "price-high" | "price-low" | "increase-high" | "decrease-high">("alphabetical");
-  const [allStocks, setAllStocks] = useState<AlphaVantageStock[]>([]);
+  const [allStocks, setAllStocks] = useState<PolygonStock[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -30,20 +30,11 @@ const LiveStocks = () => {
   const loadAllStocks = async () => {
     setLoading(true);
     try {
-      const [nyseData, nasdaqData] = await Promise.all([
-        AlphaVantageService.getAllNYSEStocks(),
-        AlphaVantageService.getAllNASDAQStocks()
-      ]);
-      
-      // Combine and deduplicate stocks
-      const combined = [...nyseData, ...nasdaqData];
-      const uniqueStocks = combined.filter((stock, index, self) => 
-        index === self.findIndex(s => s.symbol === stock.symbol)
-      );
-      
-      setAllStocks(uniqueStocks);
+      // Fetch all stocks from Polygon.io API with dynamic date (previous business day)
+      const stockData = await polygonService.getAllStocks();
+      setAllStocks(stockData);
     } catch (error) {
-      console.error('Error loading stocks:', error);
+      console.error('Error loading stocks from Polygon.io:', error);
       // Fallback to static data
       setAllStocks(nyseStocks.map(stock => ({
         symbol: stock.symbol,
@@ -51,7 +42,7 @@ const LiveStocks = () => {
         price: stock.price,
         change: stock.change,
         changePercent: stock.change,
-        volume: stock.volume
+        volume: parseFloat(stock.volume.replace(/[^\d.]/g, '')) * (stock.volume.includes('M') ? 1000000 : stock.volume.includes('K') ? 1000 : 1)
       })));
     } finally {
       setLoading(false);
