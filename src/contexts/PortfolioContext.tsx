@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { polygonService } from '@/services/polygonService';
 
 export interface PortfolioStock {
   id: string;
@@ -28,6 +29,31 @@ export const PortfolioProvider = ({ children }: { children: React.ReactNode }) =
     { id: "4", symbol: "TSLA", name: "Tesla", shares: 2, currentPrice: 251.23, change: 4.3 },
   ]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const refresh = async () => {
+      try {
+        const symbols = Array.from(new Set(portfolio.map((p) => p.symbol)));
+        const quotes = await Promise.all(symbols.map(async (sym) => ({ sym, q: await polygonService.getStockQuote(sym) })));
+        if (!isMounted) return;
+        setPortfolio((prev) => prev.map((s) => {
+          const found = quotes.find((x) => x.sym === s.symbol)?.q;
+          if (found && typeof found.price === 'number' && !Number.isNaN(found.price)) {
+            return { ...s, currentPrice: found.price, change: found.change };
+          }
+          return s;
+        }));
+      } catch (e) {
+        console.warn('Polygon refresh failed for portfolio');
+      }
+    };
+
+    refresh();
+    const id = setInterval(refresh, 60000);
+    return () => { isMounted = false; clearInterval(id); };
+  }, [portfolio.map(p => p.symbol).join('|')]);
+
   const addStock = (stock: PortfolioStock) => {
     setPortfolio(prev => [stock, ...prev]); // Add to the beginning (top)
   };
@@ -35,7 +61,6 @@ export const PortfolioProvider = ({ children }: { children: React.ReactNode }) =
   const removeStock = (id: string) => {
     setPortfolio(prev => prev.filter(stock => stock.id !== id));
   };
-
   const updateStock = (id: string, shares: number) => {
     setPortfolio(prev => prev.map(stock => 
       stock.id === id ? { ...stock, shares } : stock

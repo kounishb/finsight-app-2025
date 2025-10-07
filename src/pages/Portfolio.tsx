@@ -9,6 +9,7 @@ import { Plus, Trash2, TrendingUp, TrendingDown, Briefcase } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { nyseStocks } from "@/data/nyseStocks";
+import { polygonService } from "@/services/polygonService";
 
 const Portfolio = () => {
   const { toast } = useToast();
@@ -60,14 +61,33 @@ const Portfolio = () => {
       return;
     }
 
-    const stockInfo = nyseStocks.find(stock => 
-      stock.symbol.toUpperCase() === newStock.symbol.toUpperCase()
-    );
-    
+    const upper = newStock.symbol.toUpperCase();
+    const stockInfo = nyseStocks.find(stock => stock.symbol.toUpperCase() === upper);
+
     if (!stockInfo) {
+      // Allow adding if Polygon recognizes it even if not in nyseStocks list
+      // We'll still try Polygon below; if that also fails, show error
+    }
+
+    let price = stockInfo?.price ?? 0;
+    let change = stockInfo?.change ?? 0;
+    let name = stockInfo?.name ?? upper;
+
+    try {
+      const quote = await polygonService.getStockQuote(upper);
+      if (quote) {
+        price = quote.price;
+        change = quote.change;
+        // polygon grouped endpoint doesn't give names; keep fallback name
+      }
+    } catch (e) {
+      // Fallback to static nyseStocks data already set above
+    }
+
+    if (!price || Number.isNaN(price)) {
       toast({
         title: "Error",
-        description: "Stock not found. Please enter a valid ticker symbol.",
+        description: "Stock not found or quote unavailable. Please enter a valid ticker symbol.",
         variant: "destructive"
       });
       return;
@@ -75,11 +95,11 @@ const Portfolio = () => {
 
     const stock = {
       id: Date.now().toString(),
-      symbol: newStock.symbol.toUpperCase(),
-      name: stockInfo.name,
+      symbol: upper,
+      name,
       shares: parseInt(newStock.shares),
-      currentPrice: stockInfo.price,
-      change: stockInfo.change
+      currentPrice: price,
+      change
     };
 
     addStock(stock);
