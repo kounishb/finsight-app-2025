@@ -228,6 +228,26 @@ class PolygonService {
       return null;
     }
   }
+
+  async getRealtimeQuote(symbol: string): Promise<{ price: number } | null> {
+    try {
+      const url = `${this.baseUrl}/last/trade/${symbol}?apiKey=${this.apiKey}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Polygon realtime API error: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      // Expected shape: { status: 'success', symbol: 'AAPL', last: { price: number, ... } }
+      const price = data?.last?.price ?? data?.price ?? null;
+      if (typeof price === 'number' && price > 0) {
+        return { price };
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching realtime quote for ${symbol}:`, error);
+      return null;
+    }
+  }
 }
 
 export const polygonService = new PolygonService();

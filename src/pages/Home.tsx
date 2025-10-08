@@ -7,13 +7,91 @@ import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, DollarSign, Lightbulb, Menu, X } from "lucide-react";
 import { useFinsights } from "@/contexts/FinsightsContext";
 import { usePortfolio } from "@/contexts/PortfolioContext";
+import { useEffect, useState } from "react";
+import { polygonService } from "@/services/polygonService";
 
 const Home = () => {
   const { finsights, removeFromFinsights } = useFinsights();
   const { portfolio, getTotalValue, getTotalChange } = usePortfolio();
+  const [liveQuotes, setLiveQuotes] = useState<Record<string, { price: number; change: number }>>({});
   
   const totalPortfolioValue = getTotalValue();
   const totalDailyChange = getTotalChange();
+
+  // Hydrate from cache and refresh with realtime updates, similar to Portfolio
+  useEffect(() => {
+    // Cache-first
+    const cached = (polygonService as any).getCachedStocks?.(15 * 60 * 1000);
+    if (cached && Array.isArray(cached)) {
+      const map: Record<string, { price: number; change: number }> = {};
+      for (const s of cached) {
+        map[s.symbol] = { price: s.price, change: s.change };
+      }
+      const filtered: Record<string, { price: number; change: number }> = {};
+      for (const p of portfolio) {
+        if (map[p.symbol]) filtered[p.symbol] = map[p.symbol];
+      }
+      if (Object.keys(filtered).length > 0) setLiveQuotes(filtered);
+    }
+
+    // Network refresh for daily context and missing symbols
+    const refresh = async () => {
+      try {
+        const stocks = await polygonService.getAllStocks();
+        const map: Record<string, { price: number; change: number }> = {};
+        for (const s of stocks) {
+          map[s.symbol] = { price: s.price, change: s.change };
+        }
+        const updated: Record<string, { price: number; change: number }> = {};
+        const missing: string[] = [];
+        for (const p of portfolio) {
+          if (map[p.symbol]) updated[p.symbol] = map[p.symbol];
+          else missing.push(p.symbol);
+        }
+        if (missing.length) {
+          for (const sym of missing) {
+            try {
+              const q = await polygonService.getStockQuote(sym);
+              if (q) updated[sym] = { price: q.price, change: q.change };
+            } catch {}
+          }
+        }
+        if (Object.keys(updated).length > 0) setLiveQuotes(prev => ({ ...prev, ...updated }));
+      } catch {}
+    };
+    refresh();
+
+    // Realtime updates every 30s
+    const interval = setInterval(async () => {
+      try {
+        const symbols = portfolio.map(p => p.symbol);
+        if (symbols.length === 0) return;
+        const updates: Record<string, { price: number; change: number | undefined }> = {};
+        await Promise.all(symbols.map(async (sym) => {
+          try {
+            const rt = await polygonService.getRealtimeQuote(sym);
+            if (rt && typeof rt.price === 'number') {
+              const existing = liveQuotes[sym];
+              const change = existing?.change ?? undefined;
+              updates[sym] = { price: rt.price, change } as any;
+            }
+          } catch {}
+        }));
+        if (Object.keys(updates).length > 0) {
+          setLiveQuotes(prev => {
+            const merged: Record<string, { price: number; change: number }> = { ...prev } as any;
+            for (const k of Object.keys(updates)) {
+              const u = updates[k];
+              merged[k] = { price: u.price, change: (u.change ?? merged[k]?.change ?? 0) as number };
+            }
+            return merged;
+          });
+        }
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-background pb-20 px-4">
@@ -66,13 +144,22 @@ const Home = () => {
                   <div className="text-xs text-muted-foreground">{stock.shares} shares</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold">${stock.currentPrice.toFixed(2)}</div>
-                  <div className={`text-sm flex items-center gap-1 ${
-                    stock.change >= 0 ? 'text-success' : 'text-danger'
-                  }`}>
-                    {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    {stock.change >= 0 ? '+' : ''}{stock.change}%
-                  </div>
+                  {(() => {
+                    const q = liveQuotes[stock.symbol];
+                    const price = q?.price ?? stock.currentPrice;
+                    const change = q?.change ?? stock.change;
+                    return (
+                      <>
+                        <div className="font-semibold">${price.toFixed(2)}</div>
+                        <div className={`text-sm flex items-center gap-1 ${
+                          change >= 0 ? 'text-success' : 'text-danger'
+                        }`}>
+                          {change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {change >= 0 ? '+' : ''}{Number(change).toFixed(2)}%
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             ))}

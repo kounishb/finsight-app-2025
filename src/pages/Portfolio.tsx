@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,9 +23,93 @@ const Portfolio = () => {
   const [deleteStock, setDeleteStock] = useState<{ id: string; shares: number } | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [liveQuotes, setLiveQuotes] = useState<Record<string, { price: number; change: number }>>({});
 
   const totalValue = getTotalValue();
   const totalChange = getTotalChange();
+
+  // Hydrate from cached market data immediately, then refresh in background
+  useEffect(() => {
+    // 1) Cache-first paint
+    const cached = (polygonService as any).getCachedStocks?.(15 * 60 * 1000);
+    if (cached && Array.isArray(cached)) {
+      const map: Record<string, { price: number; change: number }> = {};
+      for (const s of cached) {
+        map[s.symbol] = { price: s.price, change: s.change };
+      }
+      // only keep relevant symbols to reduce memory
+      const filtered: Record<string, { price: number; change: number }> = {};
+      for (const p of portfolio) {
+        if (map[p.symbol]) filtered[p.symbol] = map[p.symbol];
+      }
+      if (Object.keys(filtered).length > 0) setLiveQuotes(filtered);
+    }
+
+    // 2) Network refresh
+    const refresh = async () => {
+      try {
+        const stocks = await polygonService.getAllStocks();
+        const map: Record<string, { price: number; change: number }> = {};
+        for (const s of stocks) {
+          map[s.symbol] = { price: s.price, change: s.change };
+        }
+        const updated: Record<string, { price: number; change: number }> = {};
+        const missing: string[] = [];
+        for (const p of portfolio) {
+          if (map[p.symbol]) updated[p.symbol] = map[p.symbol];
+          else missing.push(p.symbol);
+        }
+        if (missing.length) {
+          // fetch quotes for missing symbols
+          for (const sym of missing) {
+            try {
+              const q = await polygonService.getStockQuote(sym);
+              if (q) updated[sym] = { price: q.price, change: q.change };
+            } catch {}
+          }
+        }
+        if (Object.keys(updated).length > 0) setLiveQuotes(prev => ({ ...prev, ...updated }));
+      } catch (e) {
+        // ignore network errors; UI keeps cached or stored values
+      }
+    };
+
+    refresh();
+
+    // 3) Realtime price updates (every 30s)
+    const interval = setInterval(async () => {
+      try {
+        const symbols = portfolio.map(p => p.symbol);
+        if (symbols.length === 0) return;
+        const updates: Record<string, { price: number; change: number | undefined }> = {};
+        await Promise.all(symbols.map(async (sym) => {
+          try {
+            const rt = await polygonService.getRealtimeQuote(sym);
+            if (rt && typeof rt.price === 'number') {
+              // keep existing change if we have one
+              const existing = liveQuotes[sym];
+              const change = existing?.change ?? undefined;
+              updates[sym] = { price: rt.price, change } as any;
+            }
+          } catch {}
+        }));
+        if (Object.keys(updates).length > 0) {
+          setLiveQuotes(prev => {
+            const merged: Record<string, { price: number; change: number }> = { ...prev } as any;
+            for (const k of Object.keys(updates)) {
+              const u = updates[k];
+              merged[k] = { price: u.price, change: (u.change ?? merged[k]?.change ?? 0) as number };
+            }
+            return merged;
+          });
+        }
+      } catch {}
+    }, 30000);
+
+    return () => clearInterval(interval);
+    // We intentionally run once on mount; portfolio edits will trigger separate flows
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter stocks for autocomplete suggestions - prioritize stocks starting with typed letters
   const stockSuggestions = useMemo(() => {
@@ -73,16 +157,22 @@ const Portfolio = () => {
     let change = stockInfo?.change ?? 0;
     let name = stockInfo?.name ?? upper;
 
+    // Prefer realtime price first, then fallback daily quote
     try {
+      const rt = await polygonService.getRealtimeQuote(upper);
+      if (rt && typeof rt.price === 'number') {
+        price = rt.price;
+      }
+    } catch {}
+
+    try {
+      // Use daily to get percentage change context if available
       const quote = await polygonService.getStockQuote(upper);
       if (quote) {
-        price = quote.price;
+        if (!price) price = quote.price;
         change = quote.change;
-        // polygon grouped endpoint doesn't give names; keep fallback name
       }
-    } catch (e) {
-      // Fallback to static nyseStocks data already set above
-    }
+    } catch (e) {}
 
     if (!price || Number.isNaN(price)) {
       toast({
@@ -260,20 +350,37 @@ const Portfolio = () => {
                 </div>
                 
                 <div className="text-center mr-4">
-                  <div className="font-semibold">${stock.currentPrice.toFixed(2)}</div>
-                  <div className={`text-sm flex items-center gap-1 ${
-                    stock.change >= 0 ? 'text-success' : 'text-danger'
-                  }`}>
-                    {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
-                  </div>
+                  {(() => {
+                    const q = liveQuotes[stock.symbol];
+                    const price = q?.price ?? stock.currentPrice;
+                    const change = q?.change ?? stock.change;
+                    return (
+                      <>
+                        <div className="font-semibold">${price.toFixed(2)}</div>
+                        <div className={`text-sm flex items-center gap-1 ${
+                          change >= 0 ? 'text-success' : 'text-danger'
+                        }`}>
+                          {change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="text-right mr-4">
-                  <div className="font-semibold">
-                    ${(stock.shares * stock.currentPrice).toFixed(2)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Total Value</div>
+                  {(() => {
+                    const q = liveQuotes[stock.symbol];
+                    const price = q?.price ?? stock.currentPrice;
+                    return (
+                      <>
+                        <div className="font-semibold">
+                          ${(stock.shares * price).toFixed(2)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Total Value</div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <Button
