@@ -3,10 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Calendar, User, Building2, X } from "lucide-react";
-import { AlphaVantageNewsArticle, AlphaVantageNewsService } from "@/services/alphaVantageNewsService";
+import { NewsArticle } from "@/services/alphaVantageService";
 
 interface NewsViewerProps {
-  article: AlphaVantageNewsArticle | null;
+  article: NewsArticle | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -16,7 +16,7 @@ export const NewsViewer = ({ article, isOpen, onClose }: NewsViewerProps) => {
 
   const formatDate = (dateString: string) => {
     try {
-      // Alpha Vantage format: 20250917T015641
+      // Alpha Vantage format: 20241201T123000
       const year = dateString.substring(0, 4);
       const month = dateString.substring(4, 6);
       const day = dateString.substring(6, 8);
@@ -36,6 +36,11 @@ export const NewsViewer = ({ article, isOpen, onClose }: NewsViewerProps) => {
     }
   };
 
+  const getRelevantTickers = () => {
+    return article.ticker_sentiment
+      ?.filter(ticker => parseFloat(ticker.relevance_score) > 0.2)
+      ?.slice(0, 5) || [];
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -92,6 +97,26 @@ export const NewsViewer = ({ article, isOpen, onClose }: NewsViewerProps) => {
             ))}
           </div>
 
+          {/* Relevant Tickers */}
+          {getRelevantTickers().length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-2">Related Stocks:</h4>
+              <div className="flex flex-wrap gap-2">
+                {getRelevantTickers().map((ticker, index) => {
+                  const sentimentColor = 
+                    ticker.ticker_sentiment_label === 'Bullish' ? 'text-green-600' :
+                    ticker.ticker_sentiment_label === 'Bearish' ? 'text-red-600' :
+                    'text-gray-600';
+                  
+                  return (
+                    <Badge key={index} variant="outline" className={sentimentColor}>
+                      {ticker.ticker} ({ticker.ticker_sentiment_label})
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Article Summary */}
           <div>

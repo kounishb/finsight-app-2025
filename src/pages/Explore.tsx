@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { ArticleViewer } from "@/components/ArticleViewer";
 import { VideoViewer } from "@/components/VideoViewer";
 import { NewsViewer } from "@/components/NewsViewer";
-import { AlphaVantageNewsService, AlphaVantageNewsArticle } from "@/services/alphaVantageNewsService";
+import { AlphaVantageService, NewsArticle } from "@/services/alphaVantageService";
 import { useToast } from "@/hooks/use-toast";
 
 interface Article {
@@ -46,11 +46,11 @@ const Explore = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [selectedNews, setSelectedNews] = useState<AlphaVantageNewsArticle | null>(null);
+  const [selectedNews, setSelectedNews] = useState<NewsArticle | null>(null);
   const [showArticleViewer, setShowArticleViewer] = useState(false);
   const [showVideoViewer, setShowVideoViewer] = useState(false);
   const [showNewsViewer, setShowNewsViewer] = useState(false);
-  const [liveNews, setLiveNews] = useState<AlphaVantageNewsArticle[]>([]);
+  const [liveNews, setLiveNews] = useState<NewsArticle[]>([]);
   const [loadingNews, setLoadingNews] = useState(false);
   const [activeTab, setActiveTab] = useState<"news" | "learn">("news");
   const [activeSubTab, setActiveSubTab] = useState<"articles" | "videos">("articles");
@@ -63,17 +63,8 @@ const Explore = () => {
   const loadLiveNews = async () => {
     setLoadingNews(true);
     try {
-      const news = await AlphaVantageNewsService.getLatestNews();
+      const news = await AlphaVantageService.getLatestNews();
       setLiveNews(news);
-      
-      // Check if we're using mock data (API rate limit reached)
-      if (news.length > 0 && news[0].source === "Financial Times") {
-        toast({
-          title: "API Rate Limit Reached",
-          description: "Showing sample financial news. API limit exceeded, please try again later.",
-          variant: "default"
-        });
-      }
     } catch (error) {
       console.error('Error loading live news:', error);
       toast({
@@ -104,7 +95,23 @@ const Explore = () => {
   );
 
   const formatNewsDate = (dateString: string) => {
-    return AlphaVantageNewsService.formatDate(dateString);
+    try {
+      const year = dateString.substring(0, 4);
+      const month = dateString.substring(4, 6);
+      const day = dateString.substring(6, 8);
+      const hour = dateString.substring(9, 11);
+      const minute = dateString.substring(11, 13);
+      
+      const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:00`);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return '';
+    }
   };
 
   return (
@@ -213,6 +220,12 @@ const Explore = () => {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="font-medium">{news.source}</span>
                         <span>{formatNewsDate(news.time_published)}</span>
+                        <Badge variant="secondary">{news.category_within_source}</Badge>
+                        {news.ticker_sentiment && news.ticker_sentiment.length > 0 && (
+                          <Badge variant="outline">
+                            {news.ticker_sentiment[0].ticker}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </Card>
