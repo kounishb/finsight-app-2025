@@ -33,6 +33,8 @@ export interface PolygonApiResponse {
 class PolygonService {
   private readonly baseUrl = 'https://api.polygon.io/v2';
   private readonly apiKey: string;
+  private inMemoryCache: { stocks?: { data: PolygonStock[]; fetchedAt: number } } = {};
+  private readonly localStorageKey = 'polygon_all_stocks_cache_v1';
 
   constructor() {
     this.apiKey = import.meta.env.VITE_POLYGON_API_KEY || '';
@@ -60,44 +62,126 @@ class PolygonService {
     return previousDay.toISOString().split('T')[0];
   }
 
+  private getBusinessDayOffset(offsetDays: number): string {
+    // offsetDays: 0 -> yesterday or prev business day logic, 1 -> one more day back, etc.
+    const today = new Date();
+    let day = new Date(today);
+    // start from yesterday baseline
+    day.setDate(today.getDate() - 1);
+    // walk back offsetDays additional business days
+    let remaining = offsetDays;
+    while (remaining > 0) {
+      day.setDate(day.getDate() - 1);
+      if (day.getDay() !== 0 && day.getDay() !== 6) {
+        remaining -= 1;
+      }
+    }
+    // ensure it's a business day
+    if (day.getDay() === 0) {
+      day.setDate(day.getDate() - 2);
+    } else if (day.getDay() === 6) {
+      day.setDate(day.getDate() - 1);
+    }
+    return day.toISOString().split('T')[0];
+  }
+
+  private loadFromLocalStorage(): { data: PolygonStock[]; fetchedAt: number } | null {
+    try {
+      if (typeof window === 'undefined' || !('localStorage' in window)) return null;
+      const raw = window.localStorage.getItem(this.localStorageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.data) || typeof parsed.fetchedAt !== 'number') return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  private saveToLocalStorage(payload: { data: PolygonStock[]; fetchedAt: number }) {
+    try {
+      if (typeof window === 'undefined' || !('localStorage' in window)) return;
+      window.localStorage.setItem(this.localStorageKey, JSON.stringify(payload));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  public getCachedStocks(ttlMs: number = 15 * 60 * 1000): PolygonStock[] | null {
+    const now = Date.now();
+    // prefer in-memory if fresh
+    if (this.inMemoryCache.stocks && now - this.inMemoryCache.stocks.fetchedAt < ttlMs) {
+      return this.inMemoryCache.stocks.data;
+    }
+    // try localStorage
+    const ls = this.loadFromLocalStorage();
+    if (ls && now - ls.fetchedAt < ttlMs && Array.isArray(ls.data) && ls.data.length > 0) {
+      // warm in-memory cache for faster subsequent reads
+      this.inMemoryCache.stocks = ls;
+      return ls.data;
+    }
+    return null;
+  }
+
+  private async fetchGroupedByDate(date: string): Promise<PolygonStock[]> {
+    const url = `${this.baseUrl}/aggs/grouped/locale/us/market/stocks/${date}?adjusted=true&apiKey=${this.apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Polygon API error: ${response.status} ${response.statusText}`);
+    }
+    const data: PolygonApiResponse = await response.json();
+    if (data.status !== 'OK' || !data.results) {
+      throw new Error('Invalid response from Polygon API');
+    }
+    const stocks: PolygonStock[] = data.results.map(result => {
+      const changeAmount = result.c - result.o;
+      const changePercent = ((changeAmount / result.o) * 100);
+      return {
+        symbol: result.T,
+        name: result.T,
+        price: result.c,
+        change: changePercent,
+        changePercent: changePercent,
+        volume: result.v,
+        close: result.c,
+        open: result.o,
+        high: result.h,
+        low: result.l
+      };
+    });
+    return stocks.filter(stock => stock.price > 1);
+  }
+
   async getAllStocks(): Promise<PolygonStock[]> {
     try {
-      const date = this.getPreviousBusinessDay();
-      const url = `${this.baseUrl}/aggs/grouped/locale/us/market/stocks/${date}?adjusted=true&apiKey=${this.apiKey}`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Polygon API error: ${response.status} ${response.statusText}`);
-      }
-      
-      const data: PolygonApiResponse = await response.json();
-      
-      if (data.status !== 'OK' || !data.results) {
-        throw new Error('Invalid response from Polygon API');
+      // Serve from cache if recent (e.g., within 5 minutes)
+      const cacheTtlMs = 5 * 60 * 1000;
+      const cached = this.inMemoryCache.stocks;
+      const now = Date.now();
+      if (cached && now - cached.fetchedAt < cacheTtlMs) {
+        return cached.data;
       }
 
-      // Transform Polygon data to our stock format
-      const stocks: PolygonStock[] = data.results.map(result => {
-        const changeAmount = result.c - result.o;
-        const changePercent = ((changeAmount / result.o) * 100);
-        
-        return {
-          symbol: result.T,
-          name: result.T, // Polygon grouped endpoint doesn't provide company names
-          price: result.c,
-          change: changePercent,
-          changePercent: changePercent,
-          volume: result.v,
-          close: result.c,
-          open: result.o,
-          high: result.h,
-          low: result.l
-        };
-      });
+      // Try yesterday, then walk back up to 3 previous business days
+      const maxLookbackBusinessDays = 3;
+      let lastError: unknown = null;
+      for (let offset = 0; offset <= maxLookbackBusinessDays; offset++) {
+        try {
+          const date = offset === 0 ? this.getPreviousBusinessDay() : this.getBusinessDayOffset(offset);
+          const stocks = await this.fetchGroupedByDate(date);
+          // Simple sanity check to avoid empty/degenerate data
+          if (stocks && stocks.length > 50) {
+            this.inMemoryCache.stocks = { data: stocks, fetchedAt: now };
+            this.saveToLocalStorage(this.inMemoryCache.stocks);
+            return stocks;
+          }
+        } catch (err) {
+          lastError = err;
+        }
+      }
 
-      // Filter out stocks with very low prices (likely penny stocks or invalid data)
-      return stocks.filter(stock => stock.price > 1);
+      // As a last resort, throw the last error
+      throw lastError || new Error('Failed to fetch stocks from Polygon after lookback');
       
     } catch (error) {
       console.error('Error fetching stocks from Polygon:', error);
@@ -107,12 +191,6 @@ class PolygonService {
 
   async getStockQuote(symbol: string): Promise<PolygonStock | null> {
     try {
-      // Check if API key is available
-      if (!this.apiKey) {
-        console.warn('Polygon API key not available, returning null');
-        return null;
-      }
-
       const date = this.getPreviousBusinessDay();
       const url = `${this.baseUrl}/aggs/ticker/${symbol}/range/1/day/${date}/${date}?adjusted=true&apiKey=${this.apiKey}`;
       

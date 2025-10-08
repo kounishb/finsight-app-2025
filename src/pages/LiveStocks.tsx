@@ -24,26 +24,47 @@ const LiveStocks = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadAllStocks();
+    // Hydrate from cache first for instant paint
+    const cached = polygonService.getCachedStocks?.(15 * 60 * 1000);
+    if (cached && cached.length > 0) {
+      setAllStocks(cached);
+      setLoading(false);
+      // refresh in background
+      loadAllStocks();
+    } else {
+      loadAllStocks();
+    }
   }, []);
 
   const loadAllStocks = async () => {
-    setLoading(true);
+    // If we already have data, keep showing it while refreshing in background
+    if (allStocks.length === 0) {
+      setLoading(true);
+    }
     try {
-      // Fetch all stocks from Polygon.io API with dynamic date (previous business day)
       const stockData = await polygonService.getAllStocks();
       setAllStocks(stockData);
     } catch (error) {
-      console.error('Error loading stocks from Polygon.io:', error);
-      // Fallback to static data
-      setAllStocks(nyseStocks.map(stock => ({
-        symbol: stock.symbol,
-        name: stock.name,
-        price: stock.price,
-        change: stock.change,
-        changePercent: stock.change,
-        volume: parseFloat(stock.volume.replace(/[^\d.]/g, '')) * (stock.volume.includes('M') ? 1000000 : stock.volume.includes('K') ? 1000 : 1)
-      })));
+      console.error('Error loading stocks from Polygon.io (attempt 1):', error);
+      // Retry once after a short delay to avoid transient issues
+      try {
+        await new Promise(res => setTimeout(res, 600));
+        const retryData = await polygonService.getAllStocks();
+        setAllStocks(retryData);
+      } catch (retryError) {
+        console.error('Error loading stocks from Polygon.io (retry failed):', retryError);
+        // Fallback to static data only if we have nothing to show
+        if (allStocks.length === 0) {
+          setAllStocks(nyseStocks.map(stock => ({
+            symbol: stock.symbol,
+            name: stock.name,
+            price: stock.price,
+            change: stock.change,
+            changePercent: stock.change,
+            volume: parseFloat(stock.volume.replace(/[^\d.]/g, '')) * (stock.volume.includes('M') ? 1000000 : stock.volume.includes('K') ? 1000 : 1)
+          })));
+        }
+      }
     } finally {
       setLoading(false);
     }

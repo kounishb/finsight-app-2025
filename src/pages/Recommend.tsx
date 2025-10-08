@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, TrendingUp, TrendingDown, Target, DollarSign, Calendar, BarChart3, Brain, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, TrendingUp, Target, DollarSign, Calendar, BarChart3, Brain, CheckCircle, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { polygonService, PolygonStock } from "@/services/polygonService";
 
 interface SurveyData {
   age: string;
@@ -25,12 +24,6 @@ interface Recommendation {
   price: string;
   description: string;
   reason: string;
-  // Dynamic price data from Polygon API
-  realTimePrice?: number;
-  change?: number;
-  changePercent?: number;
-  volume?: number;
-  isLoading?: boolean;
 }
 
 const surveySteps = [
@@ -171,43 +164,33 @@ const Recommend = () => {
 
   // Load saved survey progress and check for existing recommendations
   useEffect(() => {
-    const loadSavedData = async () => {
-      const saved = localStorage.getItem('survey-progress');
-      const savedRecommendations = localStorage.getItem('saved-recommendations');
-      
-      if (saved) {
-        try {
-          const data = JSON.parse(saved);
-          setSurveyResponses(data.responses);
-          setCurrentStep(data.step);
-          
-          // If survey is completed and we have recommendations, show them
-          if (data.completed && savedRecommendations) {
-            try {
-              const recs = JSON.parse(savedRecommendations);
-              setRecommendations(recs);
-              setShowRecommendations(true);
-              
-              // Fetch real-time prices for saved recommendations
-              if (recs.length > 0) {
-                const updatedRecs = await fetchRealTimePrices(recs);
-                setRecommendations(updatedRecs);
-              }
-            } catch (error) {
-              console.error('Error loading saved recommendations:', error);
-            }
+    const saved = localStorage.getItem('survey-progress');
+    const savedRecommendations = localStorage.getItem('saved-recommendations');
+    
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        setSurveyResponses(data.responses);
+        setCurrentStep(data.step);
+        
+        // If survey is completed and we have recommendations, show them
+        if (data.completed && savedRecommendations) {
+          try {
+            const recs = JSON.parse(savedRecommendations);
+            setRecommendations(recs);
+            setShowRecommendations(true);
+          } catch (error) {
+            console.error('Error loading saved recommendations:', error);
           }
-        } catch (error) {
-          console.error('Error loading saved progress:', error);
         }
+      } catch (error) {
+        console.error('Error loading saved progress:', error);
       }
-      
-      if (location.state?.showRecommendations && recommendations.length > 0) {
-        setShowRecommendations(true);
-      }
-    };
-
-    loadSavedData();
+    }
+    
+    if (location.state?.showRecommendations && recommendations.length > 0) {
+      setShowRecommendations(true);
+    }
   }, [location.state]);
 
   // Save survey progress
@@ -227,37 +210,6 @@ const Recommend = () => {
       localStorage.setItem('saved-recommendations', JSON.stringify(recommendations));
     }
   }, [recommendations]);
-
-  const fetchRealTimePrices = async (recommendations: Recommendation[]): Promise<Recommendation[]> => {
-    const updatedRecommendations = await Promise.all(
-      recommendations.map(async (rec) => {
-        try {
-          const polygonData = await polygonService.getStockQuote(rec.symbol);
-          
-          if (polygonData) {
-            return {
-              ...rec,
-              realTimePrice: polygonData.price,
-              change: polygonData.change,
-              changePercent: polygonData.changePercent,
-              volume: polygonData.volume,
-              isLoading: false
-            };
-          }
-        } catch (error) {
-          console.error(`Error fetching price for ${rec.symbol}:`, error);
-        }
-        
-        // If Polygon API fails, keep the original static price
-        return {
-          ...rec,
-          isLoading: false
-        };
-      })
-    );
-    
-    return updatedRecommendations;
-  };
 
   const generateRecommendations = async () => {
     setIsGenerating(true);
@@ -279,18 +231,8 @@ const Recommend = () => {
       }
 
       if (data?.recommendations) {
-        // Set initial recommendations with loading state
-        const initialRecommendations = data.recommendations.map(rec => ({
-          ...rec,
-          isLoading: true
-        }));
-        setRecommendations(initialRecommendations);
+        setRecommendations(data.recommendations);
         setShowRecommendations(true);
-        
-        // Fetch real-time prices
-        const updatedRecommendations = await fetchRealTimePrices(data.recommendations);
-        setRecommendations(updatedRecommendations);
-        
         // Update localStorage to mark survey as completed
         localStorage.setItem('survey-progress', JSON.stringify({
           responses: surveyResponses,
@@ -398,30 +340,7 @@ const Recommend = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    {stock.isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm text-muted-foreground">Loading price...</span>
-                      </div>
-                    ) : (
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-primary">
-                          {stock.realTimePrice ? `$${stock.realTimePrice.toFixed(2)}` : stock.price}
-                        </div>
-                        {stock.change !== undefined && stock.changePercent !== undefined && (
-                          <div className={`text-sm flex items-center gap-1 ${
-                            stock.change >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {stock.change >= 0 ? (
-                              <TrendingUp className="h-3 w-3" />
-                            ) : (
-                              <TrendingDown className="h-3 w-3" />
-                            )}
-                            {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <div className="text-xl font-bold text-primary">{stock.price}</div>
                   </div>
                 </div>
                 
@@ -448,12 +367,6 @@ const Recommend = () => {
           <div className="text-xs text-muted-foreground text-center p-4 bg-accent/10 rounded-lg">
             <strong>Disclaimer:</strong> We are not qualified financial advisors. Please consult with a qualified financial advisor before making any investment decisions.
           </div>
-          
-          {recommendations.some(rec => !rec.realTimePrice && !rec.isLoading) && (
-            <div className="text-xs text-amber-600 text-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-              <strong>Note:</strong> Some prices may be static due to API limitations. For real-time prices, please check your preferred financial platform.
-            </div>
-          )}
           
           <Button 
             onClick={resetSurvey} 
