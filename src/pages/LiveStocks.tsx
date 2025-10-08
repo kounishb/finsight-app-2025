@@ -4,8 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { TrendingUp, TrendingDown, Search, BarChart3, Filter, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { nyseStocks } from "@/data/nyseStocks";
 import { polygonService, PolygonStock } from "@/services/polygonService";
 
@@ -21,52 +22,50 @@ const LiveStocks = () => {
   const [sortBy, setSortBy] = useState<"alphabetical" | "price-high" | "price-low" | "increase-high" | "decrease-high">("alphabetical");
   const [allStocks, setAllStocks] = useState<PolygonStock[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // Hydrate from cache first for instant paint
+    // Optional: hydrate from cache, but keep loader until real API data arrives
     const cached = polygonService.getCachedStocks?.(15 * 60 * 1000);
     if (cached && cached.length > 0) {
       setAllStocks(cached);
-      setLoading(false);
-      // refresh in background
-      loadAllStocks();
-    } else {
-      loadAllStocks();
     }
   }, []);
 
+  // When navigating to this page (e.g., from bottom tab), force fresh load with loader
+  useEffect(() => {
+    setLoading(true);
+    loadAllStocks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
   const loadAllStocks = async () => {
-    // If we already have data, keep showing it while refreshing in background
-    if (allStocks.length === 0) {
-      setLoading(true);
-    }
+    setLoading(true);
+    let success = false;
     try {
       const stockData = await polygonService.getAllStocks();
       setAllStocks(stockData);
+      success = true;
     } catch (error) {
       console.error('Error loading stocks from Polygon.io (attempt 1):', error);
-      // Retry once after a short delay to avoid transient issues
       try {
         await new Promise(res => setTimeout(res, 600));
         const retryData = await polygonService.getAllStocks();
         setAllStocks(retryData);
+        success = true;
       } catch (retryError) {
         console.error('Error loading stocks from Polygon.io (retry failed):', retryError);
-        // Fallback to static data only if we have nothing to show
-        if (allStocks.length === 0) {
-          setAllStocks(nyseStocks.map(stock => ({
-            symbol: stock.symbol,
-            name: stock.name,
-            price: stock.price,
-            change: stock.change,
-            changePercent: stock.change,
-            volume: parseFloat(stock.volume.replace(/[^\d.]/g, '')) * (stock.volume.includes('M') ? 1000000 : stock.volume.includes('K') ? 1000 : 1)
-          })));
-        }
       }
     } finally {
-      setLoading(false);
+      if (success) setLoading(false);
+      // Signal router loader that this route is ready
+      try {
+        const event = new CustomEvent('routeReady', { detail: { path: '/stocks' } });
+        window.dispatchEvent(event);
+      } catch {}
     }
   };
 
@@ -109,6 +108,10 @@ const LiveStocks = () => {
         return a.symbol.localeCompare(b.symbol);
     }
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredStocks.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedStocks = filteredStocks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // If search term exists but no results found, show appropriate message
   const hasSearchTerm = searchTerm.trim().length > 0;
@@ -155,9 +158,9 @@ const LiveStocks = () => {
           />
         </div>
         
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center justify-between">
           <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Sort by..." />
             </SelectTrigger>
@@ -169,6 +172,30 @@ const LiveStocks = () => {
               <SelectItem value="decrease-high">Highest Decrease</SelectItem>
             </SelectContent>
           </Select>
+
+          {!loading && filteredStocks.length > 0 && (
+            <Pagination className="w-auto ml-auto">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationLink href="#" isActive>
+                    {currentPage} / {totalPages}
+                  </PaginationLink>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
       </div>
 
@@ -179,7 +206,7 @@ const LiveStocks = () => {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2 text-muted-foreground">Loading latest stock data...</span>
           </div>
-        ) : filteredStocks.map((stock, index) => (
+        ) : pagedStocks.map((stock, index) => (
           <Card 
             key={`${stock.symbol}-${index}`} 
             className="p-4 bg-gradient-to-br from-card to-card/80 border-border/50 hover:bg-accent/20 transition-colors cursor-pointer"
@@ -213,6 +240,8 @@ const LiveStocks = () => {
           </Card>
         ))}
       </div>
+
+      
 
         {!loading && noResults && (
           <div className="text-center py-8">

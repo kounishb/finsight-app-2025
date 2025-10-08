@@ -1,5 +1,5 @@
 import { Home, TrendingUp, BarChart3, BookOpen, Briefcase } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -11,6 +11,13 @@ const navItems = [
 ];
 
 export const MobileNavigation = () => {
+  const location = useLocation();
+  const emitNavigating = (path: string) => {
+    try {
+      const ev = new CustomEvent('routeNavigating', { detail: { path } });
+      window.dispatchEvent(ev);
+    } catch {}
+  };
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
       <div className="flex items-center justify-around h-16 px-2">
@@ -18,6 +25,7 @@ export const MobileNavigation = () => {
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={() => emitNavigating(item.path)}
             className={({ isActive }) =>
               cn(
                 "flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200",
