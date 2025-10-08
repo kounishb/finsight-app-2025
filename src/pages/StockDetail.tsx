@@ -10,6 +10,7 @@ import { useFinsights } from "@/contexts/FinsightsContext";
 import { AlphaVantageService } from "@/services/alphaVantageService";
 import polygonService from "@/services/polygonService";
 import { supabase } from "@/integrations/supabase/client";
+import { polygonService } from "@/services/polygonService";
 
 // Remove static mock data: all data will be fetched dynamically
 
@@ -21,17 +22,6 @@ const StockDetail = () => {
   const { addToFinsights, finsights } = useFinsights();
   const [isAdded, setIsAdded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [stock, setStock] = useState<{
-    symbol: string;
-    name: string;
-    price: number;
-    change: number;
-    volume?: string | number;
-    marketCap?: string;
-    peRatio?: string;
-    chartData: number[];
-    recommendation?: string;
-  } | null>(null);
   const [enhancedData, setEnhancedData] = useState<{
     description?: string;
     recommendation?: string;
@@ -45,9 +35,55 @@ const StockDetail = () => {
   // Check if we came from live stocks page
   const cameFromLiveStocks = location.state?.fromLiveStocks;
 
-  // All stock details are loaded dynamically below
+  // First try to find in mock data, then in NYSE data
+  let stock = symbol ? mockStockData[symbol as keyof typeof mockStockData] : null;
+  
+  // If not found in mock data, search in NYSE stocks
+  if (!stock && symbol) {
+    const nyseStock = nyseStocks.find(s => s.symbol === symbol);
+    if (nyseStock) {
+      // Generate a more detailed description based on the company name
+      const generateDescription = (name: string, symbol: string) => {
+        // Basic industry classification based on common company patterns
+        const techKeywords = ['Technology', 'Software', 'Systems', 'Corp', 'Computing', 'Data', 'Digital', 'Cyber', 'Tech'];
+        const healthKeywords = ['Pharmaceutical', 'Therapeutics', 'Medical', 'Health', 'Bio', 'Pharma'];
+        const finKeywords = ['Bank', 'Financial', 'Capital', 'Investment', 'Credit', 'Insurance'];
+        const energyKeywords = ['Energy', 'Oil', 'Gas', 'Power', 'Electric', 'Utility'];
+        const retailKeywords = ['Retail', 'Store', 'Market', 'Shopping'];
+        
+        const isIndustry = (keywords: string[]) => keywords.some(keyword => name.includes(keyword));
+        
+        if (isIndustry(techKeywords)) {
+          return `${name} is a technology company operating in the dynamic tech sector. The company focuses on delivering innovative solutions and services in the rapidly evolving technology landscape. As a publicly traded entity on the NYSE, ${name} participates in the digital transformation trends shaping modern business and consumer markets.`;
+        } else if (isIndustry(healthKeywords)) {
+          return `${name} operates in the healthcare and life sciences sector, contributing to medical innovation and patient care solutions. The company is positioned within the growing healthcare industry, which benefits from aging demographics and increasing healthcare demand globally. As a NYSE-listed company, ${name} represents investment exposure to healthcare advancement trends.`;
+        } else if (isIndustry(finKeywords)) {
+          return `${name} is a financial services company providing banking, investment, or insurance solutions to consumers and businesses. Operating in the essential financial sector, the company facilitates economic activity and wealth management. As a publicly traded financial institution, ${name} offers exposure to economic growth and financial market trends.`;
+        } else if (isIndustry(energyKeywords)) {
+          return `${name} operates in the energy sector, involved in power generation, distribution, or energy-related services. The company participates in the critical energy infrastructure that powers economic activity. As an energy sector stock, ${name} provides exposure to energy market dynamics and the ongoing energy transition.`;
+        } else if (isIndustry(retailKeywords)) {
+          return `${name} operates in the retail and consumer goods sector, serving consumer demand through various retail channels. The company benefits from consumer spending trends and retail market evolution. As a consumer-focused business, ${name} offers exposure to consumer confidence and spending patterns.`;
+        } else {
+          return `${name} is an established company listed on the New York Stock Exchange, operating across various business segments to serve its markets. The company has built a presence in its industry through strategic operations and market positioning. As a publicly traded entity, ${name} offers investors exposure to its specific market sector and business fundamentals.`;
+        }
+      };
+      
+      const generateRecommendation = (name: string, symbol: string) => {
+        return `${name} (${symbol}) appears in our comprehensive NYSE stock database, indicating it meets the listing requirements of America's premier stock exchange. NYSE-listed companies are subject to strict financial reporting and governance standards, providing investors with transparency and regulatory oversight. For specific investment analysis and recommendations tailored to your risk tolerance and investment goals, we recommend consulting with a qualified financial advisor who can evaluate this stock's fundamentals, technical indicators, and alignment with your portfolio objectives. Consider factors such as the company's financial health, industry position, growth prospects, and how it fits within your overall investment strategy.`;
+      };
 
-  // Load core quote and enhanced data on mount/symbol change
+      stock = {
+        ...nyseStock,
+        marketCap: "N/A",
+        peRatio: "N/A", 
+        description: generateDescription(nyseStock.name, nyseStock.symbol),
+        recommendation: generateRecommendation(nyseStock.name, nyseStock.symbol),
+        chartData: [nyseStock.price * 0.95, nyseStock.price * 0.97, nyseStock.price * 0.99, nyseStock.price * 1.01, nyseStock.price * 0.98, nyseStock.price * 1.02, nyseStock.price * 0.99, nyseStock.price]
+      };
+    }
+  }
+
+  // Load enhanced data when component mounts
   useEffect(() => {
     if (!symbol) return;
     loadStockAndEnhancedData(symbol);
