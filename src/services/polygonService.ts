@@ -31,11 +31,11 @@ class PolygonService {
       const stocks: PolygonStock[] = data.stocks.map((stock: any) => ({
         symbol: stock.symbol,
         name: stock.name,
-        price: stock.price,
+        price: stock.price || stock.close,
         change: stock.change,
         changePercent: stock.change,
         volume: typeof stock.volume === 'string' ? parseFloat(stock.volume) : stock.volume,
-        close: stock.close || stock.price,
+        close: stock.close,
         open: stock.open,
         high: stock.high,
         low: stock.low

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFinsights } from "@/contexts/FinsightsContext";
 import { nyseStocks } from "@/data/nyseStocks";
 import { supabase } from "@/integrations/supabase/client";
+import { polygonService } from "@/services/polygonService";
 
 const mockStockData = {
   "NVDA": {
@@ -80,6 +81,7 @@ const StockDetail = () => {
   const { addToFinsights, finsights } = useFinsights();
   const [isAdded, setIsAdded] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [polygonStock, setPolygonStock] = useState<any>(null);
   const [enhancedData, setEnhancedData] = useState<{
     description?: string;
     recommendation?: string;
@@ -93,8 +95,50 @@ const StockDetail = () => {
   // Check if we came from live stocks page
   const cameFromLiveStocks = location.state?.fromLiveStocks;
 
-  // First try to find in mock data, then in NYSE data
+  // Fetch polygon data if coming from live stocks
+  useEffect(() => {
+    const fetchPolygonData = async () => {
+      if (cameFromLiveStocks && symbol) {
+        try {
+          const data = await polygonService.getStockQuote(symbol);
+          if (data) {
+            setPolygonStock(data);
+          }
+        } catch (error) {
+          console.error('Error fetching polygon stock data:', error);
+        }
+      }
+    };
+    fetchPolygonData();
+  }, [symbol, cameFromLiveStocks]);
+
+  // First try to find in mock data, then in NYSE data, then use polygon data
   let stock = symbol ? mockStockData[symbol as keyof typeof mockStockData] : null;
+  
+  // If coming from live stocks and we have polygon data, use that
+  if (cameFromLiveStocks && polygonStock) {
+    stock = {
+      symbol: polygonStock.symbol,
+      name: polygonStock.name,
+      price: polygonStock.price,
+      change: polygonStock.change,
+      volume: polygonStock.volume.toLocaleString(),
+      marketCap: "N/A",
+      peRatio: "N/A",
+      description: `${polygonStock.name} is listed on the stock exchange with symbol ${polygonStock.symbol}.`,
+      recommendation: `This stock is currently trading at $${polygonStock.price.toFixed(2)} with a ${polygonStock.change >= 0 ? 'positive' : 'negative'} change of ${polygonStock.change.toFixed(2)}%.`,
+      chartData: [
+        polygonStock.price * 0.95,
+        polygonStock.price * 0.97,
+        polygonStock.price * 0.99,
+        polygonStock.price * 1.01,
+        polygonStock.price * 0.98,
+        polygonStock.price * 1.02,
+        polygonStock.price * 0.99,
+        polygonStock.price
+      ]
+    };
+  }
   
   // If not found in mock data, search in NYSE stocks
   if (!stock && symbol) {
