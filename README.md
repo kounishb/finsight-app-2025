@@ -60,6 +60,31 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## API Keys Setup
+
+To enable real-time stock prices and news, you'll need to set up API keys:
+
+1. **Create a `.env.local` file** in the project root
+2. **Add your API keys** (get free keys from the respective services):
+
+```env
+# Polygon.io API key for real-time stock prices
+VITE_POLYGON_API_KEY=your_polygon_api_key_here
+
+# Alpha Vantage API key (optional)
+VITE_ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key_here
+
+# MarketAux API key (optional)
+VITE_MARKETAUX_API_KEY=your_marketaux_key_here
+```
+
+**Get your free API keys:**
+- [Polygon.io](https://polygon.io/) - For real-time stock prices
+- [Alpha Vantage](https://www.alphavantage.co/) - For additional stock data
+- [MarketAux](https://marketaux.com/) - For financial news
+
+**Note:** Without API keys, the app will show static/mock data instead of real-time information.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/e255e4b0-1d40-4489-a203-6ee2f9bd5c75) and click on Share -> Publish.

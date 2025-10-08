@@ -107,6 +107,12 @@ class PolygonService {
 
   async getStockQuote(symbol: string): Promise<PolygonStock | null> {
     try {
+      // Check if API key is available
+      if (!this.apiKey) {
+        console.warn('Polygon API key not available, returning null');
+        return null;
+      }
+
       const date = this.getPreviousBusinessDay();
       const url = `${this.baseUrl}/aggs/ticker/${symbol}/range/1/day/${date}/${date}?adjusted=true&apiKey=${this.apiKey}`;
       
