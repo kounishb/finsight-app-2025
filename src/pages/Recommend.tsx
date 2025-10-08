@@ -6,6 +6,7 @@ import { ArrowLeft, TrendingUp, Target, DollarSign, Calendar, BarChart3, Brain, 
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { polygonService } from "@/services/polygonService";
 
 interface SurveyData {
   age: string;
@@ -151,6 +152,7 @@ const Recommend = () => {
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [liveQuotes, setLiveQuotes] = useState<Record<string, { price: number; change?: number }>>({});
   const [surveyResponses, setSurveyResponses] = useState<SurveyData>({
     age: '',
     experience: '',
@@ -210,6 +212,69 @@ const Recommend = () => {
       localStorage.setItem('saved-recommendations', JSON.stringify(recommendations));
     }
   }, [recommendations]);
+
+  // Live pricing: cache-first, daily refresh for context, plus realtime interval
+  useEffect(() => {
+    if (!showRecommendations || recommendations.length === 0) return;
+
+    // hydrate from cache
+    const cached = (polygonService as any).getCachedStocks?.(15 * 60 * 1000);
+    if (cached && Array.isArray(cached)) {
+      const map: Record<string, { price: number; change?: number }>= {};
+      for (const s of cached) {
+        map[s.symbol] = { price: s.price, change: s.change };
+      }
+      const filtered: Record<string, { price: number; change?: number }> = {};
+      for (const rec of recommendations) {
+        if (map[rec.symbol]) filtered[rec.symbol] = map[rec.symbol];
+      }
+      if (Object.keys(filtered).length > 0) setLiveQuotes(prev => ({ ...prev, ...filtered }));
+    }
+
+    // network refresh (daily bars or per-symbol if missing)
+    const refresh = async () => {
+      try {
+        const stocks = await polygonService.getAllStocks();
+        const bySymbol: Record<string, { price: number; change?: number }> = {};
+        for (const s of stocks) bySymbol[s.symbol] = { price: s.price, change: s.change };
+        const updates: Record<string, { price: number; change?: number }> = {};
+        const missing: string[] = [];
+        for (const rec of recommendations) {
+          if (bySymbol[rec.symbol]) updates[rec.symbol] = bySymbol[rec.symbol];
+          else missing.push(rec.symbol);
+        }
+        if (missing.length) {
+          for (const sym of missing) {
+            try {
+              const q = await polygonService.getStockQuote(sym);
+              if (q) updates[sym] = { price: q.price, change: q.change };
+            } catch {}
+          }
+        }
+        if (Object.keys(updates).length > 0) setLiveQuotes(prev => ({ ...prev, ...updates }));
+      } catch {}
+    };
+    refresh();
+
+    // realtime interval every 30s
+    const interval = setInterval(async () => {
+      try {
+        if (recommendations.length === 0) return;
+        const updates: Record<string, { price: number; change?: number }> = {};
+        await Promise.all(recommendations.map(async r => {
+          try {
+            const rt = await polygonService.getRealtimeQuote(r.symbol);
+            if (rt && typeof rt.price === 'number') {
+              const existing = liveQuotes[r.symbol];
+              updates[r.symbol] = { price: rt.price, change: existing?.change };
+            }
+          } catch {}
+        }));
+        if (Object.keys(updates).length > 0) setLiveQuotes(prev => ({ ...prev, ...updates }));
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [showRecommendations, recommendations]);
 
   const generateRecommendations = async () => {
     setIsGenerating(true);
@@ -340,7 +405,13 @@ const Recommend = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-primary">{stock.price}</div>
+                    {(() => {
+                      const q = liveQuotes[stock.symbol];
+                      const price = typeof q?.price === 'number' ? q.price : parseFloat(stock.price.replace(/[^\d.]/g, ''));
+                      return (
+                        <div className="text-xl font-bold text-primary">${price.toFixed(2)}</div>
+                      );
+                    })()}
                   </div>
                 </div>
                 
