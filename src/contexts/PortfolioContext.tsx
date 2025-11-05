@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { polygonService } from '@/services/polygonService';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './AuthContext';
 
 export interface PortfolioStock {
   id: string;
@@ -22,12 +24,63 @@ interface PortfolioContextType {
 const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
 
 export const PortfolioProvider = ({ children }: { children: React.ReactNode }) => {
-  const [portfolio, setPortfolio] = useState<PortfolioStock[]>([
-    { id: "1", symbol: "AAPL", name: "Apple Inc.", shares: 10, currentPrice: 175.43, change: 2.1 },
-    { id: "2", symbol: "MSFT", name: "Microsoft", shares: 5, currentPrice: 378.85, change: -1.2 },
-    { id: "3", symbol: "GOOGL", name: "Alphabet", shares: 3, currentPrice: 142.56, change: 0.8 },
-    { id: "4", symbol: "TSLA", name: "Tesla", shares: 2, currentPrice: 251.23, change: 4.3 },
-  ]);
+  const { user } = useAuth();
+  const [portfolio, setPortfolio] = useState<PortfolioStock[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load portfolio from Supabase when user changes
+  useEffect(() => {
+    const loadPortfolio = async () => {
+      if (!user) {
+        setPortfolio([]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('portfolio')
+          .select('*')
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        // Fetch current prices for all stocks
+        const portfolioWithPrices = await Promise.all(
+          (data || []).map(async (item) => {
+            try {
+              const quote = await polygonService.getStockQuote(item.symbol);
+              return {
+                id: item.id,
+                symbol: item.symbol,
+                name: item.name,
+                shares: Number(item.shares),
+                currentPrice: quote.price || 0,
+                change: quote.change || 0,
+              };
+            } catch {
+              return {
+                id: item.id,
+                symbol: item.symbol,
+                name: item.name,
+                shares: Number(item.shares),
+                currentPrice: 0,
+                change: 0,
+              };
+            }
+          })
+        );
+
+        setPortfolio(portfolioWithPrices);
+      } catch (error) {
+        console.error('Error loading portfolio:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPortfolio();
+  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
@@ -54,17 +107,68 @@ export const PortfolioProvider = ({ children }: { children: React.ReactNode }) =
     return () => { isMounted = false; clearInterval(id); };
   }, [portfolio.map(p => p.symbol).join('|')]);
 
-  const addStock = (stock: PortfolioStock) => {
-    setPortfolio(prev => [stock, ...prev]); // Add to the beginning (top)
+  const addStock = async (stock: PortfolioStock) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('portfolio')
+        .insert({
+          user_id: user.id,
+          symbol: stock.symbol,
+          name: stock.name,
+          shares: stock.shares,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPortfolio(prev => [{
+        ...stock,
+        id: data.id,
+      }, ...prev]);
+    } catch (error) {
+      console.error('Error adding stock:', error);
+    }
   };
 
-  const removeStock = (id: string) => {
-    setPortfolio(prev => prev.filter(stock => stock.id !== id));
+  const removeStock = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('portfolio')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setPortfolio(prev => prev.filter(stock => stock.id !== id));
+    } catch (error) {
+      console.error('Error removing stock:', error);
+    }
   };
-  const updateStock = (id: string, shares: number) => {
-    setPortfolio(prev => prev.map(stock => 
-      stock.id === id ? { ...stock, shares } : stock
-    ));
+
+  const updateStock = async (id: string, shares: number) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('portfolio')
+        .update({ shares })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setPortfolio(prev => prev.map(stock => 
+        stock.id === id ? { ...stock, shares } : stock
+      ));
+    } catch (error) {
+      console.error('Error updating stock:', error);
+    }
   };
 
   const getTotalValue = () => {

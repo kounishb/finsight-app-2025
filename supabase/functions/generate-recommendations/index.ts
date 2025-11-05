@@ -108,7 +108,7 @@ Make sure each recommendation is personalized to their specific profile and incl
     return getFallbackRecommendations();
 
   } catch (error) {
-    console.error('Error in generate-recommendations function:', error);
+    console.error('Error in generate-recommendations function:', error instanceof Error ? error.message : error);
     return getFallbackRecommendations();
   }
 });

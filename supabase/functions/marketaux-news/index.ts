@@ -132,7 +132,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in marketaux-news function:', error);
+    console.error('Error in marketaux-news function:', error instanceof Error ? error.message : error);
     
     // Return fallback mock data on error
     const fallbackNews = [
@@ -155,7 +155,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        error: error.message, 
+        error: error instanceof Error ? error.message : 'Unknown error', 
         news: fallbackNews 
       }),
       { 
