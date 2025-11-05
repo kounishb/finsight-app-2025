@@ -34,12 +34,10 @@ const LiveStocks = () => {
       setAllStocks(cached);
     }
     
-    // Fetch market overview data from OpenAI
+    // Fetch market overview data from market-indices edge function
     const fetchMarketOverview = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('stock-data-openai', {
-          body: { type: 'market-overview' }
-        });
+        const { data, error } = await supabase.functions.invoke('market-indices');
         
         if (error) throw error;
         
@@ -181,7 +179,7 @@ const LiveStocks = () => {
           />
         </div>
         
-        <div className="flex gap-2 flex-wrap items-center justify-between">
+        <div className="flex gap-2 flex-wrap items-center">
           <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
             <SelectTrigger className="w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
@@ -195,30 +193,6 @@ const LiveStocks = () => {
               <SelectItem value="decrease-high">Highest Decrease</SelectItem>
             </SelectContent>
           </Select>
-
-          {!loading && filteredStocks.length > 0 && (
-            <Pagination className="w-auto ml-auto">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }}
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#" isActive>
-                    {currentPage} / {totalPages}
-                  </PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
         </div>
       </div>
 
@@ -264,15 +238,40 @@ const LiveStocks = () => {
         ))}
       </div>
 
-      
+      {/* Pagination at bottom */}
+      {!loading && filteredStocks.length > 0 && (
+        <div className="mt-6 flex justify-center">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); window.scrollTo(0, 0); }}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink href="#" isActive>
+                  {currentPage} / {totalPages}
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0, 0); }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
-        {!loading && noResults && (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              No stocks found for "{searchTerm}". The stock may not exist in our database.
-            </p>
-          </div>
-        )}
+      {!loading && noResults && (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            No stocks found for "{searchTerm}". The stock may not exist in our database.
+          </p>
+        </div>
+      )}
       
       {!loading && !hasSearchTerm && filteredStocks.length === 0 && (
         <div className="text-center py-8">
