@@ -10,6 +10,7 @@ import { useFinsights } from "@/contexts/FinsightsContext";
 import { AlphaVantageService } from "@/services/alphaVantageService";
 import polygonService from "@/services/polygonService";
 import { supabase } from "@/integrations/supabase/client";
+import { formatNumber } from "@/lib/utils";
 
 // Remove static mock data: all data will be fetched dynamically
 
@@ -253,7 +254,7 @@ const StockDetail = () => {
             <p className="text-muted-foreground">{stock.name}</p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold">${stock.price.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${formatNumber(stock.price)}</div>
             <div className={`text-sm flex items-center gap-1 ${
               stock.change >= 0 ? 'text-success' : 'text-danger'
             }`}>

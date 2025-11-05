@@ -10,6 +10,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { nyseStocks } from "@/data/nyseStocks";
 import { polygonService, PolygonStock } from "@/services/polygonService";
 import { supabase } from "@/integrations/supabase/client";
+import { formatNumber } from "@/lib/utils";
 
 const LiveStocks = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -218,13 +219,13 @@ const LiveStocks = () => {
                   <div>
                     <div className="font-semibold text-foreground">{stock.symbol}</div>
                     <div className="text-sm text-muted-foreground truncate max-w-[150px]">{stock.name}</div>
-                    <div className="text-xs text-muted-foreground">Close: ${(stock as any).close?.toFixed(2) || stock.price.toFixed(2)}</div>
+                    <div className="text-xs text-muted-foreground">Close: ${formatNumber((stock as any).close || stock.price)}</div>
                   </div>
                 </div>
               </div>
               
               <div className="text-right">
-                <div className="text-lg font-bold text-foreground">${stock.price.toFixed(2)}</div>
+                <div className="text-lg font-bold text-foreground">${formatNumber(stock.price)}</div>
                 <div className={`text-sm flex items-center gap-1 justify-end ${
                   stock.change >= 0 ? 'text-success' : 'text-danger'
                 }`}>
