@@ -29,17 +29,12 @@ serve(async (req) => {
         model: 'sonar',
         messages: [
           {
-            role: 'system',
-            content: 'You are a financial data assistant. You MUST return current market data for all three indices. Return ONLY valid JSON with NO markdown formatting.'
-          },
-          {
             role: 'user',
-            content: 'What are the current live values and daily percentage changes for the S&P 500 (SPX), Dow Jones Industrial Average (DJIA), and Nasdaq Composite (IXIC) stock market indices right now? Format as JSON: {"sp500": {"value": "5234.18", "change": 0.5}, "dowJones": {"value": "42863.86", "change": 0.3}, "nasdaq": {"value": "18342.94", "change": 0.8}}. Use the actual current market values.'
+            content: 'What is the current price and today\'s percentage change for: 1) S&P 500 index, 2) Dow Jones Industrial Average, and 3) Nasdaq Composite? Return ONLY a JSON object in this exact format with actual current market data: {"sp500": {"value": "6770.00", "change": -0.5}, "dowJones": {"value": "47000.00", "change": 0.3}, "nasdaq": {"value": "23000.00", "change": 0.8}}. Replace the example numbers with today\'s real values. Return nothing except the JSON object.'
           }
         ],
-        temperature: 0.1,
-        top_p: 0.9,
-        max_tokens: 300,
+        temperature: 0.0,
+        max_tokens: 200,
       }),
     });
 
