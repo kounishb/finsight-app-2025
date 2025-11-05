@@ -30,11 +30,11 @@ serve(async (req) => {
         messages: [
           {
             role: 'user',
-            content: 'Search the web right now and get the current real-time market prices and today\'s percentage changes for these three stock indices: S&P 500, Dow Jones Industrial Average, and Nasdaq Composite. Return ONLY a JSON object with the actual live data you find from financial websites. Use this exact structure: {"sp500": {"value": "CURRENT_PRICE", "change": PERCENTAGE_NUMBER}, "dowJones": {"value": "CURRENT_PRICE", "change": PERCENTAGE_NUMBER}, "nasdaq": {"value": "CURRENT_PRICE", "change": PERCENTAGE_NUMBER}}. Replace CURRENT_PRICE and PERCENTAGE_NUMBER with the real values you find online right now.'
+            content: 'Get the current closing prices and today\'s percentage changes for these THREE DIFFERENT indices from financial websites: 1) S&P 500 index (SPX) - currently around 6,770 points, 2) Dow Jones Industrial Average (DJI/DJIA) - currently around 47,000 points, 3) Nasdaq Composite index (COMP/IXIC) - currently around 23,000 points. These are three completely different indices with different values. Search financial news sites for each one separately. Return ONLY valid JSON: {"sp500": {"value": "ACTUAL_SP500_PRICE", "change": ACTUAL_SP500_CHANGE}, "dowJones": {"value": "ACTUAL_DOW_PRICE", "change": ACTUAL_DOW_CHANGE}, "nasdaq": {"value": "ACTUAL_NASDAQ_PRICE", "change": ACTUAL_NASDAQ_CHANGE}}'
           }
         ],
         temperature: 0.0,
-        max_tokens: 250,
+        max_tokens: 300,
       }),
     });
 
