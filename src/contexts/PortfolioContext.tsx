@@ -45,27 +45,47 @@ export const PortfolioProvider = ({ children }: { children: React.ReactNode }) =
 
         if (error) throw error;
 
-        // Fetch current prices for all stocks
+        // Use database values as fallback, then try to fetch fresh prices
         const portfolioWithPrices = await Promise.all(
           (data || []).map(async (item) => {
+            // Use database values as initial/fallback
+            const dbPrice = Number(item.current_price) || 0;
+            const dbChange = Number(item.change) || 0;
+            
             try {
               const quote = await polygonService.getStockQuote(item.symbol);
+              const newPrice = quote.price || dbPrice;
+              const newChange = quote.change || dbChange;
+              
+              // Update database with fresh values if we got them
+              if (quote.price && quote.price !== dbPrice) {
+                await supabase
+                  .from('portfolio')
+                  .update({ 
+                    current_price: newPrice,
+                    change: newChange 
+                  })
+                  .eq('id', item.id)
+                  .eq('user_id', user.id);
+              }
+              
               return {
                 id: item.id,
                 symbol: item.symbol,
                 name: item.name,
                 shares: Number(item.shares),
-                currentPrice: quote.price || 0,
-                change: quote.change || 0,
+                currentPrice: newPrice,
+                change: newChange,
               };
             } catch {
+              // On API failure, use database values
               return {
                 id: item.id,
                 symbol: item.symbol,
                 name: item.name,
                 shares: Number(item.shares),
-                currentPrice: 0,
-                change: 0,
+                currentPrice: dbPrice,
+                change: dbChange,
               };
             }
           })
@@ -88,11 +108,31 @@ export const PortfolioProvider = ({ children }: { children: React.ReactNode }) =
     const refresh = async () => {
       try {
         const symbols = Array.from(new Set(portfolio.map((p) => p.symbol)));
-        const quotes = await Promise.all(symbols.map(async (sym) => ({ sym, q: await polygonService.getStockQuote(sym) })));
+        const quotes = await Promise.all(
+          symbols.map(async (sym) => {
+            try {
+              const q = await polygonService.getStockQuote(sym);
+              return { sym, q };
+            } catch {
+              return { sym, q: null };
+            }
+          })
+        );
         if (!isMounted) return;
+        
         setPortfolio((prev) => prev.map((s) => {
           const found = quotes.find((x) => x.sym === s.symbol)?.q;
           if (found && typeof found.price === 'number' && !Number.isNaN(found.price)) {
+            // Update database with fresh values
+            supabase
+              .from('portfolio')
+              .update({ 
+                current_price: found.price,
+                change: found.change 
+              })
+              .eq('id', s.id)
+              .eq('user_id', user?.id || '');
+            
             return { ...s, currentPrice: found.price, change: found.change };
           }
           return s;
@@ -118,6 +158,8 @@ export const PortfolioProvider = ({ children }: { children: React.ReactNode }) =
           symbol: stock.symbol,
           name: stock.name,
           shares: stock.shares,
+          current_price: stock.currentPrice,
+          change: stock.change,
         })
         .select()
         .single();
