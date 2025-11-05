@@ -9,12 +9,7 @@ import { TrendingUp, TrendingDown, Search, BarChart3, Filter, Loader2 } from "lu
 import { useNavigate, useLocation } from "react-router-dom";
 import { nyseStocks } from "@/data/nyseStocks";
 import { polygonService, PolygonStock } from "@/services/polygonService";
-
-const marketIndices = [
-  { name: "S&P 500", value: "4,567.89", change: 0.7 },
-  { name: "Dow Jones", value: "35,432.10", change: -0.3 },
-  { name: "Nasdaq", value: "14,123.45", change: 1.2 }
-];
+import { supabase } from "@/integrations/supabase/client";
 
 const LiveStocks = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,6 +21,11 @@ const LiveStocks = () => {
   const pageSize = 20;
   const navigate = useNavigate();
   const location = useLocation();
+  const [marketIndices, setMarketIndices] = useState([
+    { name: "S&P 500", value: "4,567.89", change: 0.7 },
+    { name: "Dow Jones", value: "35,432.10", change: -0.3 },
+    { name: "Nasdaq", value: "14,123.45", change: 1.2 }
+  ]);
 
   useEffect(() => {
     // Optional: hydrate from cache, but keep loader until real API data arrives
@@ -33,6 +33,29 @@ const LiveStocks = () => {
     if (cached && cached.length > 0) {
       setAllStocks(cached);
     }
+    
+    // Fetch market overview data from OpenAI
+    const fetchMarketOverview = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('stock-data-openai', {
+          body: { type: 'market-overview' }
+        });
+        
+        if (error) throw error;
+        
+        if (data) {
+          setMarketIndices([
+            { name: "S&P 500", value: data.sp500.value, change: data.sp500.change },
+            { name: "Dow Jones", value: data.dowJones.value, change: data.dowJones.change },
+            { name: "Nasdaq", value: data.nasdaq.value, change: data.nasdaq.change }
+          ]);
+        }
+      } catch (error) {
+        console.error('Error fetching market overview:', error);
+      }
+    };
+    
+    fetchMarketOverview();
   }, []);
 
   // When navigating to this page (e.g., from bottom tab), force fresh load with loader

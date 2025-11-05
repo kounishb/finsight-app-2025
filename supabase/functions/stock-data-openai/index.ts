@@ -14,10 +14,6 @@ serve(async (req) => {
   try {
     const { symbol, type } = await req.json();
     
-    if (!symbol) {
-      throw new Error('Symbol is required');
-    }
-
     const API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!API_KEY) {
       throw new Error('OpenAI API key not configured');
@@ -25,7 +21,18 @@ serve(async (req) => {
 
     let prompt = '';
     
-    if (type === 'company-description') {
+    if (type === 'market-overview') {
+      prompt = `Provide realistic current market data for the major US market indices in this exact JSON format:
+      {
+        "sp500": { "value": "current S&P 500 value", "change": numeric percentage change },
+        "dowJones": { "value": "current Dow Jones value", "change": numeric percentage change },
+        "nasdaq": { "value": "current Nasdaq value", "change": numeric percentage change }
+      }
+      
+      Return only the JSON, no other text.`;
+    } else if (!symbol) {
+      throw new Error('Symbol is required');
+    } else if (type === 'company-description') {
       prompt = `Write a comprehensive company description for ${symbol}. This should be 4-5 detailed paragraphs covering:
       1. Company overview, founding, and core business
       2. Main products/services and market position
@@ -71,7 +78,7 @@ serve(async (req) => {
             content: prompt
           }
         ],
-        max_completion_tokens: type === 'stock-metrics' ? 100 : 800,
+        max_completion_tokens: type === 'stock-metrics' || type === 'market-overview' ? 150 : 800,
       }),
     });
 
@@ -92,6 +99,17 @@ serve(async (req) => {
           volume: "25.4M",
           marketCap: "1.2T", 
           peRatio: "28.5"
+        };
+      }
+    } else if (type === 'market-overview') {
+      try {
+        result = JSON.parse(content);
+      } catch (e) {
+        // Fallback if JSON parsing fails
+        result = {
+          sp500: { value: "4,567.89", change: 0.7 },
+          dowJones: { value: "35,432.10", change: -0.3 },
+          nasdaq: { value: "14,123.45", change: 1.2 }
         };
       }
     } else {
