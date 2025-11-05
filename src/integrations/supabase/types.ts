@@ -49,9 +49,7 @@ export type Database = {
       }
       portfolio: {
         Row: {
-          change: number | null
           created_at: string
-          current_price: number | null
           id: string
           name: string
           shares: number
@@ -59,9 +57,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          change?: number | null
           created_at?: string
-          current_price?: number | null
           id?: string
           name: string
           shares?: number
@@ -69,9 +65,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          change?: number | null
           created_at?: string
-          current_price?: number | null
           id?: string
           name?: string
           shares?: number

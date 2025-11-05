@@ -114,15 +114,15 @@ const Home = () => {
       <div className="grid grid-cols-2 gap-4 mb-6">
         <FinancialCard
           title="Net Worth"
-          value={totalPortfolioValue > 0 ? `$${totalPortfolioValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '$0'}
-          change={totalPortfolioValue > 0 ? {
+          value={`$${totalPortfolioValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+          change={{
             value: `$${Math.abs(totalDailyChange).toFixed(2)}`,
             isPositive: totalDailyChange >= 0
-          } : undefined}
+          }}
         />
         <FinancialCard
           title="Daily Change"
-          value={totalPortfolioValue === 0 ? '0%' : `${totalDailyChange >= 0 ? '+' : ''}${((totalDailyChange / totalPortfolioValue) * 100).toFixed(2)}%`}
+          value={totalPortfolioValue === 0 ? '+0%' : `${totalDailyChange >= 0 ? '+' : ''}${((totalDailyChange / totalPortfolioValue) * 100).toFixed(2)}%`}
         />
       </div>
 

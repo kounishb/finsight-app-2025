@@ -50,36 +50,22 @@ export const PortfolioProvider = ({ children }: { children: React.ReactNode }) =
           (data || []).map(async (item) => {
             try {
               const quote = await polygonService.getStockQuote(item.symbol);
-              // Update database with latest price
-              const newPrice = quote.price || item.current_price || 0;
-              const newChange = quote.change || item.change || 0;
-              
-              await supabase
-                .from('portfolio')
-                .update({ 
-                  current_price: newPrice,
-                  change: newChange 
-                })
-                .eq('id', item.id);
-              
               return {
                 id: item.id,
                 symbol: item.symbol,
                 name: item.name,
                 shares: Number(item.shares),
-                currentPrice: newPrice,
-                change: newChange,
+                currentPrice: quote.price || 0,
+                change: quote.change || 0,
               };
-            } catch (error) {
-              console.error(`Error fetching quote for ${item.symbol}:`, error);
-              // Use stored values from database when API fails
+            } catch {
               return {
                 id: item.id,
                 symbol: item.symbol,
                 name: item.name,
                 shares: Number(item.shares),
-                currentPrice: item.current_price || 0,
-                change: item.change || 0,
+                currentPrice: 0,
+                change: 0,
               };
             }
           })
