@@ -30,11 +30,11 @@ serve(async (req) => {
         messages: [
           {
             role: 'user',
-            content: 'What is the current price and today\'s percentage change for: 1) S&P 500 index, 2) Dow Jones Industrial Average, and 3) Nasdaq Composite? Return ONLY a JSON object in this exact format with actual current market data: {"sp500": {"value": "6770.00", "change": -0.5}, "dowJones": {"value": "47000.00", "change": 0.3}, "nasdaq": {"value": "23000.00", "change": 0.8}}. Replace the example numbers with today\'s real values. Return nothing except the JSON object.'
+            content: 'Search the web right now and get the current real-time market prices and today\'s percentage changes for these three stock indices: S&P 500, Dow Jones Industrial Average, and Nasdaq Composite. Return ONLY a JSON object with the actual live data you find from financial websites. Use this exact structure: {"sp500": {"value": "CURRENT_PRICE", "change": PERCENTAGE_NUMBER}, "dowJones": {"value": "CURRENT_PRICE", "change": PERCENTAGE_NUMBER}, "nasdaq": {"value": "CURRENT_PRICE", "change": PERCENTAGE_NUMBER}}. Replace CURRENT_PRICE and PERCENTAGE_NUMBER with the real values you find online right now.'
           }
         ],
         temperature: 0.0,
-        max_tokens: 200,
+        max_tokens: 250,
       }),
     });
 
