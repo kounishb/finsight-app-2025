@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      finsights: {
+        Row: {
+          change: number
+          created_at: string
+          id: string
+          name: string
+          price: number
+          reason: string | null
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          change?: number
+          created_at?: string
+          id?: string
+          name: string
+          price?: number
+          reason?: string | null
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          change?: number
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number
+          reason?: string | null
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      portfolio: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          shares: number
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          shares?: number
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          shares?: number
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
