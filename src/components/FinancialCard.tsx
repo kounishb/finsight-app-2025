@@ -21,9 +21,7 @@ export const FinancialCard = ({
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         <div className="text-2xl font-bold text-foreground">{value}</div>
-        {change && <div className={cn("text-sm font-medium flex items-center gap-1", change.isPositive ? "text-success" : "text-danger")}>
-            {change.isPositive ? '+' : ''}{change.value}
-          </div>}
+        {change}
         {children}
       </div>
     </Card>;
