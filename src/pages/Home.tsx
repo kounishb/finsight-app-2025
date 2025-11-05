@@ -122,7 +122,7 @@ const Home = () => {
         />
         <FinancialCard
           title="Daily Change"
-          value={`${totalDailyChange >= 0 ? '+' : ''}${((totalDailyChange / totalPortfolioValue) * 100).toFixed(2)}%`}
+          value={totalPortfolioValue === 0 ? '+0%' : `${totalDailyChange >= 0 ? '+' : ''}${((totalDailyChange / totalPortfolioValue) * 100).toFixed(2)}%`}
         />
       </div>
 
@@ -136,7 +136,13 @@ const Home = () => {
         </div>
         <ScrollArea className="h-64">
           <div className="space-y-3 p-4">
-            {portfolio.map((stock) => (
+            {portfolio.length === 0 ? (
+              <div className="text-center py-8">
+                <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">Add stocks to your portfolio to track your investments!</p>
+              </div>
+            ) : (
+              portfolio.map((stock) => (
               <div key={stock.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/20 hover:bg-accent/30 transition-colors">
                 <div className="flex-1">
                   <div className="font-semibold text-foreground">{stock.symbol}</div>
@@ -158,11 +164,12 @@ const Home = () => {
                           {change >= 0 ? '+' : ''}{Number(change).toFixed(2)}%
                         </div>
                       </>
-                    );
-                  })()}
+                  );
+                })()}
                 </div>
               </div>
-            ))}
+              ))
+            )}
           </div>
         </ScrollArea>
       </Card>
