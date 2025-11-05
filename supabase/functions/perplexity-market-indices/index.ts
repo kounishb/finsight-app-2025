@@ -30,11 +30,11 @@ serve(async (req) => {
         messages: [
           {
             role: 'user',
-            content: 'Search the web RIGHT NOW for the latest closing prices and today\'s percentage changes for these THREE DIFFERENT stock market indices:\n\n1. S&P 500 (ticker: SPX or ^GSPC) - This is the S&P 500 index\n2. Dow Jones Industrial Average (ticker: DJI or ^DJI or DJIA) - This is the Dow Jones index\n3. Nasdaq Composite (ticker: IXIC or ^IXIC or COMP) - This is the Nasdaq Composite index\n\nThese are THREE COMPLETELY DIFFERENT indices with DIFFERENT values. S&P 500 is around 6,000-7,000 points, Dow Jones is around 42,000-48,000 points, and Nasdaq Composite is around 18,000-24,000 points.\n\nSearch financial websites like Yahoo Finance, Google Finance, Bloomberg, CNBC, or MarketWatch for the current values.\n\nReturn ONLY this JSON format with the ACTUAL DIFFERENT values you find:\n{"sp500": {"value": "ACTUAL_SP500_VALUE", "change": ACTUAL_SP500_PERCENT}, "dowJones": {"value": "ACTUAL_DOW_VALUE", "change": ACTUAL_DOW_PERCENT}, "nasdaq": {"value": "ACTUAL_NASDAQ_VALUE", "change": ACTUAL_NASDAQ_PERCENT}}'
+            content: 'Get the current closing prices and today\'s percentage changes for these THREE DIFFERENT indices from financial websites: 1) S&P 500 index (SPX) - currently around 6,770 points, 2) Dow Jones Industrial Average (DJI/DJIA) - currently around 47,000 points, 3) Nasdaq Composite index (COMP/IXIC) - currently around 23,000 points. These are three completely different indices with different values. Search financial news sites for each one separately. Return ONLY valid JSON: {"sp500": {"value": "ACTUAL_SP500_PRICE", "change": ACTUAL_SP500_CHANGE}, "dowJones": {"value": "ACTUAL_DOW_PRICE", "change": ACTUAL_DOW_CHANGE}, "nasdaq": {"value": "ACTUAL_NASDAQ_PRICE", "change": ACTUAL_NASDAQ_CHANGE}}'
           }
         ],
         temperature: 0.0,
-        max_tokens: 400,
+        max_tokens: 300,
       }),
     });
 
