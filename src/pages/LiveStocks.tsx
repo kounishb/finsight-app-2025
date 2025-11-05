@@ -195,30 +195,6 @@ const LiveStocks = () => {
               <SelectItem value="decrease-high">Highest Decrease</SelectItem>
             </SelectContent>
           </Select>
-
-          {!loading && filteredStocks.length > 0 && (
-            <Pagination className="w-auto ml-auto">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }}
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#" isActive>
-                    {currentPage} / {totalPages}
-                  </PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
         </div>
       </div>
 
@@ -277,6 +253,41 @@ const LiveStocks = () => {
       {!loading && !hasSearchTerm && filteredStocks.length === 0 && (
         <div className="text-center py-8">
           <p className="text-muted-foreground">No stocks found matching your criteria</p>
+        </div>
+      )}
+
+      {/* Pagination at bottom */}
+      {!loading && filteredStocks.length > 0 && (
+        <div className="mt-6 pb-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    setPage(p => Math.max(1, p - 1)); 
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink href="#" isActive>
+                  {currentPage} / {totalPages}
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    setPage(p => Math.min(totalPages, p + 1)); 
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
     </div>
