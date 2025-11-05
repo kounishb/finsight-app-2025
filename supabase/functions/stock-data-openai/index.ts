@@ -67,7 +67,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -78,7 +78,8 @@ serve(async (req) => {
             content: prompt
           }
         ],
-        max_completion_tokens: type === 'stock-metrics' || type === 'market-overview' ? 150 : 800,
+        max_tokens: type === 'stock-metrics' || type === 'market-overview' ? 150 : 800,
+        temperature: 0.7,
       }),
     });
 
