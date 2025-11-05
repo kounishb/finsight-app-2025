@@ -56,12 +56,32 @@ serve(async (req) => {
     // Clean up the response - remove markdown code blocks if present
     content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     
+    // Extract just the JSON object - look for the first { and find its matching }
+    const firstBrace = content.indexOf('{');
+    if (firstBrace === -1) {
+      throw new Error('No JSON object found in response');
+    }
+    
+    // Find the matching closing brace for the first opening brace
+    let braceCount = 0;
+    let jsonEnd = firstBrace;
+    for (let i = firstBrace; i < content.length; i++) {
+      if (content[i] === '{') braceCount++;
+      if (content[i] === '}') braceCount--;
+      if (braceCount === 0) {
+        jsonEnd = i + 1;
+        break;
+      }
+    }
+    
+    const jsonString = content.substring(firstBrace, jsonEnd);
+    
     // Parse the JSON response
     let marketData;
     try {
-      marketData = JSON.parse(content);
+      marketData = JSON.parse(jsonString);
     } catch (parseError) {
-      console.error('Failed to parse Perplexity response:', content);
+      console.error('Failed to parse Perplexity response:', jsonString);
       // Return fallback data if parsing fails
       marketData = {
         sp500: { value: "5,234.18", change: 0.5 },
