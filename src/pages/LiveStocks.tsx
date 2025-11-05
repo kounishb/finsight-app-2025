@@ -34,12 +34,10 @@ const LiveStocks = () => {
       setAllStocks(cached);
     }
     
-    // Fetch market overview data from OpenAI
+    // Fetch market overview data from Perplexity
     const fetchMarketOverview = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('stock-data-openai', {
-          body: { type: 'market-overview' }
-        });
+        const { data, error } = await supabase.functions.invoke('perplexity-market-indices');
         
         if (error) throw error;
         
