@@ -16,7 +16,20 @@ export const NewsViewer = ({ article, isOpen, onClose }: NewsViewerProps) => {
 
   const formatDate = (dateString: string) => {
     try {
-      // Alpha Vantage format: 20241201T123000
+      // Handle ISO format (e.g., 2025-11-05T02:40:50.000000Z)
+      if (dateString.includes('T') && dateString.includes('-')) {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
+      // Handle Alpha Vantage format: 20241201T123000
       const year = dateString.substring(0, 4);
       const month = dateString.substring(4, 6);
       const day = dateString.substring(6, 8);
@@ -24,6 +37,8 @@ export const NewsViewer = ({ article, isOpen, onClose }: NewsViewerProps) => {
       const minute = dateString.substring(11, 13);
       
       const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:00`);
+      if (isNaN(date.getTime())) return '';
+      
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -32,7 +47,7 @@ export const NewsViewer = ({ article, isOpen, onClose }: NewsViewerProps) => {
         minute: '2-digit'
       });
     } catch (error) {
-      return dateString;
+      return '';
     }
   };
 
@@ -58,10 +73,12 @@ export const NewsViewer = ({ article, isOpen, onClose }: NewsViewerProps) => {
               <Building2 className="h-4 w-4" />
               <span>{article.source}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              <span>{formatDate(article.time_published)}</span>
-            </div>
+            {formatDate(article.time_published) && (
+              <div className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                <span>{formatDate(article.time_published)}</span>
+              </div>
+            )}
             {article.authors && article.authors.length > 0 && (
               <div className="flex items-center gap-1">
                 <User className="h-4 w-4" />

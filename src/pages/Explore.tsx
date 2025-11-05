@@ -96,6 +96,19 @@ const Explore = () => {
 
   const formatNewsDate = (dateString: string) => {
     try {
+      // Handle ISO format (e.g., 2025-11-05T02:40:50.000000Z)
+      if (dateString.includes('T') && dateString.includes('-')) {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
+      // Handle Alpha Vantage format (e.g., 20241201T123000)
       const year = dateString.substring(0, 4);
       const month = dateString.substring(4, 6);
       const day = dateString.substring(6, 8);
@@ -103,6 +116,8 @@ const Explore = () => {
       const minute = dateString.substring(11, 13);
       
       const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:00`);
+      if (isNaN(date.getTime())) return '';
+      
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -219,7 +234,9 @@ const Explore = () => {
                       
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="font-medium">{news.source}</span>
-                        <span>{formatNewsDate(news.time_published)}</span>
+                        {formatNewsDate(news.time_published) && (
+                          <span>{formatNewsDate(news.time_published)}</span>
+                        )}
                         <Badge variant="secondary">{news.category_within_source}</Badge>
                         {news.ticker_sentiment && news.ticker_sentiment.length > 0 && (
                           <Badge variant="outline">
