@@ -17,7 +17,7 @@ serve(async (req) => {
       throw new Error('PERPLEXITY_API_KEY is not configured');
     }
 
-    console.log('Fetching market indices from Perplexity API...');
+    console.log('Fetching real-time market indices from Perplexity...');
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -30,16 +30,16 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a financial data assistant. Return ONLY valid JSON with current market data. No markdown, no code blocks, just raw JSON.'
+            content: 'You are a financial data assistant. You MUST return current market data for all three indices. Return ONLY valid JSON with NO markdown formatting.'
           },
           {
             role: 'user',
-            content: 'Get the current real-time values for S&P 500, Dow Jones, and Nasdaq indices. Return in this exact JSON format: {"sp500": {"value": "4567.89", "change": 0.7}, "dowJones": {"value": "35432.10", "change": -0.3}, "nasdaq": {"value": "14123.45", "change": 1.2}}. Use actual current market data.'
+            content: 'What are the current live values and daily percentage changes for the S&P 500 (SPX), Dow Jones Industrial Average (DJIA), and Nasdaq Composite (IXIC) stock market indices right now? Format as JSON: {"sp500": {"value": "5234.18", "change": 0.5}, "dowJones": {"value": "42863.86", "change": 0.3}, "nasdaq": {"value": "18342.94", "change": 0.8}}. Use the actual current market values.'
           }
         ],
-        temperature: 0.2,
+        temperature: 0.1,
         top_p: 0.9,
-        max_tokens: 500,
+        max_tokens: 300,
       }),
     });
 
