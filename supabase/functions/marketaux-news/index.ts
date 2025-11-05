@@ -45,6 +45,96 @@ serve(async (req) => {
           overall_sentiment_score: 0.7,
           overall_sentiment_label: "Bullish",
           ticker_sentiment: [{ ticker: "AAPL", relevance_score: "0.9", ticker_sentiment_score: "0.8", ticker_sentiment_label: "Bullish" }]
+        },
+        {
+          title: "Energy Markets React to Global Supply Chain Updates",
+          url: "https://example.com/energy-markets",
+          time_published: new Date(Date.now() - 7200000).toISOString(),
+          authors: ["Energy Correspondent"],
+          summary: "Oil prices fluctuate as OPEC announces production targets while renewable energy investments reach record highs.",
+          banner_image: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=400&h=200&fit=crop",
+          source: "Reuters",
+          category_within_source: "Energy",
+          source_domain: "reuters.com",
+          topics: [{ topic: "Energy Markets", relevance_score: "0.85" }],
+          overall_sentiment_score: 0.2,
+          overall_sentiment_label: "Neutral",
+          ticker_sentiment: [{ ticker: "XLE", relevance_score: "0.75", ticker_sentiment_score: "0.3", ticker_sentiment_label: "Neutral" }]
+        },
+        {
+          title: "Healthcare Stocks Surge on Breakthrough Drug Approvals",
+          url: "https://example.com/healthcare-surge",
+          time_published: new Date(Date.now() - 10800000).toISOString(),
+          authors: ["Healthcare Reporter"],
+          summary: "Pharmaceutical companies see significant gains following FDA approval of innovative treatments for chronic conditions.",
+          banner_image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&h=200&fit=crop",
+          source: "CNBC",
+          category_within_source: "Healthcare",
+          source_domain: "cnbc.com",
+          topics: [{ topic: "Healthcare", relevance_score: "0.92" }],
+          overall_sentiment_score: 0.8,
+          overall_sentiment_label: "Bullish",
+          ticker_sentiment: [{ ticker: "XLV", relevance_score: "0.88", ticker_sentiment_score: "0.75", ticker_sentiment_label: "Bullish" }]
+        },
+        {
+          title: "Consumer Spending Patterns Shift in Latest Economic Report",
+          url: "https://example.com/consumer-spending",
+          time_published: new Date(Date.now() - 14400000).toISOString(),
+          authors: ["Economic Analysis Team"],
+          summary: "New data reveals changing consumer preferences with increased focus on essential goods and digital services.",
+          banner_image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=200&fit=crop",
+          source: "Wall Street Journal",
+          category_within_source: "Consumer Trends",
+          source_domain: "wsj.com",
+          topics: [{ topic: "Consumer Economics", relevance_score: "0.87" }],
+          overall_sentiment_score: 0.15,
+          overall_sentiment_label: "Neutral",
+          ticker_sentiment: [{ ticker: "XLY", relevance_score: "0.82", ticker_sentiment_score: "0.25", ticker_sentiment_label: "Neutral" }]
+        },
+        {
+          title: "Banking Sector Adapts to Digital Transformation Trends",
+          url: "https://example.com/banking-digital",
+          time_published: new Date(Date.now() - 18000000).toISOString(),
+          authors: ["Banking Industry Expert"],
+          summary: "Major financial institutions accelerate digital banking initiatives while maintaining traditional service channels.",
+          banner_image: "https://images.unsplash.com/photo-1501167786227-4cba60f6d58f?w=400&h=200&fit=crop",
+          source: "Financial Times",
+          category_within_source: "Banking",
+          source_domain: "ft.com",
+          topics: [{ topic: "Banking Technology", relevance_score: "0.91" }],
+          overall_sentiment_score: 0.5,
+          overall_sentiment_label: "Bullish",
+          ticker_sentiment: [{ ticker: "XLF", relevance_score: "0.84", ticker_sentiment_score: "0.55", ticker_sentiment_label: "Bullish" }]
+        },
+        {
+          title: "Global Trade Dynamics Influence Market Sentiment",
+          url: "https://example.com/global-trade",
+          time_published: new Date(Date.now() - 21600000).toISOString(),
+          authors: ["International Trade Reporter"],
+          summary: "New trade agreements and tariff adjustments create both opportunities and challenges for multinational corporations.",
+          banner_image: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400&h=200&fit=crop",
+          source: "Bloomberg",
+          category_within_source: "International Trade",
+          source_domain: "bloomberg.com",
+          topics: [{ topic: "Global Trade", relevance_score: "0.89" }],
+          overall_sentiment_score: -0.1,
+          overall_sentiment_label: "Neutral",
+          ticker_sentiment: []
+        },
+        {
+          title: "Real Estate Market Shows Mixed Signals Across Regions",
+          url: "https://example.com/real-estate",
+          time_published: new Date(Date.now() - 25200000).toISOString(),
+          authors: ["Real Estate Analyst"],
+          summary: "Housing markets vary significantly by location with urban areas experiencing different trends than suburban markets.",
+          banner_image: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=200&fit=crop",
+          source: "MarketWatch",
+          category_within_source: "Real Estate",
+          source_domain: "marketwatch.com",
+          topics: [{ topic: "Real Estate", relevance_score: "0.86" }],
+          overall_sentiment_score: 0.0,
+          overall_sentiment_label: "Neutral",
+          ticker_sentiment: [{ ticker: "XLRE", relevance_score: "0.79", ticker_sentiment_score: "0.1", ticker_sentiment_label: "Neutral" }]
         }
       ];
       
@@ -64,7 +154,7 @@ serve(async (req) => {
     console.log('Fetching financial news from Marketaux API...');
 
     // Build Marketaux API URL
-    let apiUrl = `https://api.marketaux.com/v1/news/all?api_token=${API_KEY}&limit=50&language=en&sort=published_desc`;
+    let apiUrl = `https://api.marketaux.com/v1/news/all?api_token=${API_KEY}&limit=100&language=en&sort=published_desc`;
     
     // Add symbols filter if provided
     if (tickers && tickers.trim()) {
@@ -72,7 +162,7 @@ serve(async (req) => {
     }
     
     // Add filter for financial news
-    apiUrl += '&filter_entities=true&categories=general,forex,crypto,merger_acquisition';
+    apiUrl += '&filter_entities=true';
 
     const response = await fetch(apiUrl, {
       headers: {
