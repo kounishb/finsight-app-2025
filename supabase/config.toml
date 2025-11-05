@@ -1,1 +1,4 @@
 project_id = "somnrhvcmlotspyzpxpp"
+
+[functions.perplexity-market-indices]
+verify_jwt = false
