@@ -131,29 +131,50 @@ const StockDetail = () => {
       }
       
       // Handle description response
+      console.log('Description response:', descriptionRes);
       if (descriptionRes.status === 'fulfilled') {
         const result = descriptionRes.value as any;
+        console.log('Description result:', result);
         if (result?.data?.content) {
           newEnhancedData.description = result.data.content;
+          console.log('Set description:', newEnhancedData.description.substring(0, 100));
+        } else {
+          console.error('Description missing content:', result);
         }
+      } else {
+        console.error('Description fetch failed:', descriptionRes);
       }
       
       // Handle recommendation response
+      console.log('Recommendation response:', recommendationRes);
       if (recommendationRes.status === 'fulfilled') {
         const result = recommendationRes.value as any;
+        console.log('Recommendation result:', result);
         if (result?.data?.content) {
           newEnhancedData.recommendation = result.data.content;
+          console.log('Set recommendation:', newEnhancedData.recommendation.substring(0, 100));
+        } else {
+          console.error('Recommendation missing content:', result);
         }
+      } else {
+        console.error('Recommendation fetch failed:', recommendationRes);
       }
       
       // Handle metrics response
+      console.log('Metrics response:', metricsRes);
       if (metricsRes.status === 'fulfilled') {
         const result = metricsRes.value as any;
+        console.log('Metrics result:', result);
         if (result?.data) {
           newEnhancedData.volume = result.data.volume;
           newEnhancedData.marketCap = result.data.marketCap;
           newEnhancedData.peRatio = result.data.peRatio;
+          console.log('Set metrics:', newEnhancedData);
+        } else {
+          console.error('Metrics missing data:', result);
         }
+      } else {
+        console.error('Metrics fetch failed:', metricsRes);
       }
       
       // Attach recommendation to stock used by Add to Finsights
