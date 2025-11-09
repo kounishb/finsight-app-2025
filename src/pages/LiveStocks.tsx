@@ -28,31 +28,31 @@ const LiveStocks = () => {
     { name: "Nasdaq", value: "14,123.45", change: 1.2 }
   ]);
 
+  // Fetch market overview data from Perplexity
+  const fetchMarketOverview = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('perplexity-market-indices');
+      
+      if (error) throw error;
+      
+      if (data) {
+        setMarketIndices([
+          { name: "S&P 500", value: data.sp500.value, change: data.sp500.change },
+          { name: "Dow Jones", value: data.dowJones.value, change: data.dowJones.change },
+          { name: "Nasdaq", value: data.nasdaq.value, change: data.nasdaq.change }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching market overview:', error);
+    }
+  };
+
   useEffect(() => {
     // Optional: hydrate from cache, but keep loader until real API data arrives
     const cached = polygonService.getCachedStocks?.(15 * 60 * 1000);
     if (cached && cached.length > 0) {
       setAllStocks(cached);
     }
-    
-    // Fetch market overview data from Perplexity
-    const fetchMarketOverview = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('perplexity-market-indices');
-        
-        if (error) throw error;
-        
-        if (data) {
-          setMarketIndices([
-            { name: "S&P 500", value: data.sp500.value, change: data.sp500.change },
-            { name: "Dow Jones", value: data.dowJones.value, change: data.dowJones.change },
-            { name: "Nasdaq", value: data.nasdaq.value, change: data.nasdaq.change }
-          ]);
-        }
-      } catch (error) {
-        console.error('Error fetching market overview:', error);
-      }
-    };
     
     fetchMarketOverview();
   }, []);
@@ -61,6 +61,8 @@ const LiveStocks = () => {
   useEffect(() => {
     setLoading(true);
     loadAllStocks();
+    // Also fetch fresh market indices every time page is visited
+    fetchMarketOverview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
 
