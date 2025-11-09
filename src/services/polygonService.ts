@@ -122,19 +122,20 @@ class PolygonService {
   }
 
   private async fetchGroupedByDate(date: string): Promise<PolygonStock[]> {
-    // Call edge function instead of direct API access for security
     const { supabase } = await import('@/integrations/supabase/client');
-    const { data, error } = await supabase.functions.invoke('polygon-stocks');
+    const { data, error } = await supabase.functions.invoke('polygon-stocks', {
+      body: {}
+    });
     
     if (error) {
       throw new Error(`Edge function error: ${error.message}`);
     }
     
-    if (!data || !Array.isArray(data)) {
+    if (!data || !data.stocks || !Array.isArray(data.stocks)) {
       throw new Error('Invalid response from edge function');
     }
     
-    return data.filter((stock: PolygonStock) => stock.price > 1);
+    return data.stocks.filter((stock: PolygonStock) => stock.price > 1);
   }
 
   async getAllStocks(): Promise<PolygonStock[]> {

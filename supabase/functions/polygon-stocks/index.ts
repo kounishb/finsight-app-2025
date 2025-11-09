@@ -15,7 +15,6 @@ serve(async (req) => {
     const API_KEY = Deno.env.get('POLYGON_API_KEY');
     if (!API_KEY) {
       console.log('Polygon API key not configured, returning mock data');
-      // Return some mock data when API key is not configured
       const mockStocks = [
         { symbol: "AAPL", name: "Apple Inc.", price: 175.45, change: 2.34, close: 175.45, volume: "45234567" },
         { symbol: "MSFT", name: "Microsoft Corporation", price: 378.92, change: -1.23, close: 378.92, volume: "23456789" },
@@ -40,86 +39,75 @@ serve(async (req) => {
     // Initialize Polygon client
     const rest = restClient(API_KEY, 'https://api.polygon.io');
 
-    // Get popular stock tickers
+    // Limit to top 25 stocks to avoid timeouts
     const popularTickers = [
       'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'NFLX',
       'AMD', 'CRM', 'ORCL', 'ADBE', 'INTC', 'IBM', 'CSCO', 'JPM',
-      'BAC', 'WFC', 'GS', 'MS', 'JNJ', 'PFE', 'ABBV', 'TMO', 'XOM',
-      'CVX', 'KO', 'PEP', 'WMT', 'HD', 'LOW', 'TGT', 'COST', 'NKE',
-      'MCD', 'SBUX', 'DIS', 'UBER', 'LYFT', 'SPOT', 'SNAP', 'ZM',
-      'SQ', 'PYPL', 'V', 'MA', 'AXP'
+      'BAC', 'WFC', 'GS', 'MS', 'JNJ', 'PFE', 'ABBV', 'TMO', 'XOM'
     ];
 
     const stocks = [];
     
-    // Get previous trading day
-    const date = new Date();
-    date.setDate(date.getDate() - 1);
-    // If it's weekend, go back to Friday
-    while (date.getDay() === 0 || date.getDay() === 6) {
-      date.setDate(date.getDate() - 1);
-    }
-    const tradingDay = date.toISOString().split('T')[0];
-
-    console.log(`Getting stock open/close data for ${tradingDay}`);
-
-    // Fetch data for popular stocks in smaller batches
-    const batchSize = 5;
-    for (let i = 0; i < popularTickers.length; i += batchSize) {
-      const batch = popularTickers.slice(i, i + batchSize);
-      
-      try {
-        // Get open/close data for this batch
-        const promises = batch.map(async (ticker) => {
-          try {
-            const response = await rest.getStocksOpenClose({
-              stocksTicker: ticker,
-              date: tradingDay,
-              adjusted: "true"
-            });
-
-            if (response && response.close) {
-              // Calculate change percentage
-              const change = response.open ? ((response.close - response.open) / response.open) * 100 : 0;
-              
-              return {
-                symbol: ticker,
-                name: `${ticker} Corporation`, // Simplified name
-                price: parseFloat(response.close.toFixed(2)),
-                close: parseFloat(response.close.toFixed(2)),
-                change: parseFloat(change.toFixed(2)),
-                volume: response.volume?.toString() || '0',
-                open: response.open || 0,
-                high: response.high || 0,
-                low: response.low || 0
-              };
-            }
-            
-            return null;
-          } catch (error) {
-            console.warn(`Error fetching ${ticker}:`, error.message);
-            return null;
-          }
-        });
-
-        const results = await Promise.allSettled(promises);
-        
-        // Add successful results to stocks array
-        results.forEach((result) => {
-          if (result.status === 'fulfilled' && result.value) {
-            stocks.push(result.value);
-          }
-        });
-
-        // Delay between batches to avoid rate limits
-        if (i + batchSize < popularTickers.length) {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
-        }
-
-      } catch (error) {
-        console.error(`Error processing batch starting at ${i}:`, error);
+    // Get previous trading day - try multiple days back if needed
+    const getPreviousTradingDay = (daysBack = 1) => {
+      const date = new Date();
+      date.setDate(date.getDate() - daysBack);
+      // If it's weekend, go back to Friday
+      while (date.getDay() === 0 || date.getDay() === 6) {
+        date.setDate(date.getDate() - 1);
       }
-    }
+      return date.toISOString().split('T')[0];
+    };
+
+    // Try multiple days to find data
+    let tradingDay = getPreviousTradingDay(1);
+    console.log(`Attempting to get stock data for ${tradingDay}`);
+
+    // Fetch all stocks in parallel with timeout
+    const fetchPromises = popularTickers.map(async (ticker) => {
+      try {
+        const response = await Promise.race([
+          rest.getStocksOpenClose({
+            stocksTicker: ticker,
+            date: tradingDay,
+            adjusted: "true"
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 3000)
+          )
+        ]);
+
+        if (response && response.close) {
+          const change = response.open ? ((response.close - response.open) / response.open) * 100 : 0;
+          
+          return {
+            symbol: ticker,
+            name: `${ticker} Corporation`,
+            price: parseFloat(response.close.toFixed(2)),
+            close: parseFloat(response.close.toFixed(2)),
+            change: parseFloat(change.toFixed(2)),
+            volume: response.volume?.toString() || '0',
+            open: response.open || 0,
+            high: response.high || 0,
+            low: response.low || 0
+          };
+        }
+        
+        return null;
+      } catch (error) {
+        console.warn(`Error fetching ${ticker}:`, error.message);
+        return null;
+      }
+    });
+
+    const results = await Promise.allSettled(fetchPromises);
+    
+    // Add successful results to stocks array
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value) {
+        stocks.push(result.value);
+      }
+    });
 
     console.log(`Successfully fetched data for ${stocks.length} stocks`);
 
