@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { nyseStocks } from "@/data/nyseStocks";
 import { polygonService } from "@/services/polygonService";
 
 const Portfolio = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const { portfolio, addStock, removeStock, updateStock, getTotalValue, getTotalChange } = usePortfolio();
@@ -141,9 +143,9 @@ const Portfolio = () => {
     if (!user) {
       toast({
         title: "Sign In Required",
-        description: "Please sign in to add stocks to your portfolio",
-        variant: "destructive"
+        description: "Please sign in to add stocks to your portfolio"
       });
+      navigate('/signin');
       return;
     }
 

@@ -205,9 +205,9 @@ const StockDetail = () => {
     if (!user) {
       toast({
         title: "Sign In Required",
-        description: "Please sign in to add stocks to your finsights",
-        variant: "destructive"
+        description: "Please sign in to add stocks to your finsights"
       });
+      navigate('/signin');
       return;
     }
 
