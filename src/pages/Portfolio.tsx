@@ -139,7 +139,7 @@ const Portfolio = () => {
     return allMatches.slice(0, 5);
   }, [newStock.symbol]);
 
-  const handleAddStock = async () => {
+  const handleOpenAddStockDialog = () => {
     if (!user) {
       toast({
         title: "Sign In Required",
@@ -148,7 +148,10 @@ const Portfolio = () => {
       navigate('/signin');
       return;
     }
+    setIsOpen(true);
+  };
 
+  const handleAddStock = async () => {
     if (!newStock.symbol || !newStock.shares) {
       toast({
         title: "Error",
@@ -288,12 +291,10 @@ const Portfolio = () => {
       {/* Add Stock Button */}
       <div className="mb-6">
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Stock
-            </Button>
-          </DialogTrigger>
+          <Button className="w-full" onClick={handleOpenAddStockDialog}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Stock
+          </Button>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Stock</DialogTitle>
