@@ -136,7 +136,7 @@ const Home = () => {
             Your Portfolio
           </h2>
         </div>
-        <ScrollArea className="h-64">
+        <div className="max-h-64 overflow-y-auto">
           <div className="space-y-3 p-4">
             {portfolio.length === 0 ? (
               <div className="text-center py-8">
@@ -176,7 +176,7 @@ const Home = () => {
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
       </Card>
 
       {/* Your Finsights */}
@@ -187,7 +187,7 @@ const Home = () => {
             Your Finsights
           </h2>
         </div>
-        <ScrollArea className="h-48">
+        <div className="max-h-64 overflow-y-auto">
           <div className="space-y-3 p-4">
             {finsights.length === 0 ? (
               <div className="text-center py-8">
@@ -229,7 +229,7 @@ const Home = () => {
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
       </Card>
     </div>
   );
