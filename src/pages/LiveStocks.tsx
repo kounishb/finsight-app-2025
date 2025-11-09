@@ -174,7 +174,7 @@ const LiveStocks = () => {
             <Card className="col-span-3 p-4 bg-gradient-to-br from-card to-card/80 border-border/50">
               <div className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">Loading latest market data from Perplexity...</span>
+                <span className="text-sm text-muted-foreground">Loading market overview data...</span>
               </div>
             </Card>
           ) : (

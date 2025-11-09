@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, TrendingUp, TrendingDown, Lightbulb, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFinsights } from "@/contexts/FinsightsContext";
+import { useAuth } from "@/contexts/AuthContext";
 // Dynamic data services
 import { AlphaVantageService } from "@/services/alphaVantageService";
 import polygonService from "@/services/polygonService";
@@ -19,6 +20,7 @@ const StockDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { addToFinsights, finsights } = useFinsights();
   const [isAdded, setIsAdded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -200,6 +202,15 @@ const StockDetail = () => {
   const isAlreadyInFinsights = stock ? finsights.some(s => s.symbol === stock.symbol) : false;
 
   const handleAddToFinsights = () => {
+    if (!user) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to add stocks to your finsights",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!stock) return;
     
     if (isAlreadyInFinsights) {

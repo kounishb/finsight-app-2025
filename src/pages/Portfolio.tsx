@@ -8,11 +8,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Trash2, TrendingUp, TrendingDown, Briefcase } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePortfolio } from "@/contexts/PortfolioContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { nyseStocks } from "@/data/nyseStocks";
 import { polygonService } from "@/services/polygonService";
 
 const Portfolio = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { portfolio, addStock, removeStock, updateStock, getTotalValue, getTotalChange } = usePortfolio();
   
   const [newStock, setNewStock] = useState({
@@ -136,6 +138,15 @@ const Portfolio = () => {
   }, [newStock.symbol]);
 
   const handleAddStock = async () => {
+    if (!user) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to add stocks to your portfolio",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!newStock.symbol || !newStock.shares) {
       toast({
         title: "Error",
