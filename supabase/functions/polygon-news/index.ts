@@ -1,9 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const tickersSchema = z.string()
+  .trim()
+  .regex(/^[A-Z,]{1,100}$/, 'Invalid ticker format')
+  .optional()
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -16,7 +22,10 @@ serve(async (req) => {
       throw new Error('Polygon API key not configured');
     }
 
-    const { tickers } = await req.json();
+    const { tickers } = await req.json().catch(() => ({}));
+
+    // Validate tickers input
+    const validatedTickers = tickersSchema.parse(tickers);
 
     // Get news from the past 7 days
     const today = new Date();
@@ -27,9 +36,10 @@ serve(async (req) => {
     let newsUrl = `https://api.polygon.io/v2/reference/news?published_utc.gte=${fromDate}&published_utc.lte=${toDate}&order=desc&limit=50&apikey=${API_KEY}`;
     
     // If specific tickers are requested, add them to the query
-    if (tickers && tickers.length > 0) {
-      const tickerParam = tickers.split(',').slice(0, 10).join(','); // Limit to 10 tickers
-      newsUrl += `&ticker=${tickerParam}`;
+    if (validatedTickers) {
+      const tickerArray = validatedTickers.split(',').slice(0, 10);
+      const tickerParam = tickerArray.join(',');
+      newsUrl += `&ticker=${encodeURIComponent(tickerParam)}`;
     }
 
     const newsResponse = await fetch(newsUrl);

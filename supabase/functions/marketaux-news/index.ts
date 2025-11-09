@@ -1,9 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const tickersSchema = z.string()
+  .trim()
+  .regex(/^[A-Z,]{1,100}$/, 'Invalid ticker format')
+  .optional()
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -151,14 +157,17 @@ serve(async (req) => {
 
     const { tickers } = await req.json().catch(() => ({}));
 
+    // Validate tickers input
+    const validatedTickers = tickersSchema.parse(tickers);
+
     console.log('Fetching financial news from Marketaux API...');
 
     // Build Marketaux API URL
     let apiUrl = `https://api.marketaux.com/v1/news/all?api_token=${API_KEY}&limit=100&language=en&sort=published_desc`;
     
     // Add symbols filter if provided
-    if (tickers && tickers.trim()) {
-      apiUrl += `&symbols=${tickers}`;
+    if (validatedTickers) {
+      apiUrl += `&symbols=${encodeURIComponent(validatedTickers)}`;
     }
     
     // Add filter for financial news
