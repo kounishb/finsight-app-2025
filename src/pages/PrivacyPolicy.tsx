@@ -95,6 +95,16 @@ const PrivacyPolicy = () => {
                     <li>Export your portfolio data at any time</li>
                     <li>Opt-out of promotional communications</li>
                   </ul>
+                  <p className="text-muted-foreground mt-4">
+                    To request account deletion, please visit our{' '}
+                    <a 
+                      href="/delete-account" 
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Account Deletion page
+                    </a>
+                    {' '}for detailed instructions.
+                  </p>
                 </section>
 
                 <section>
