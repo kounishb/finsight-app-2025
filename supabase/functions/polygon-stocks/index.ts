@@ -12,35 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const API_KEY = Deno.env.get('POLYGON_API_KEY');
-    // Temporarily use mock data due to API issues
-    if (!API_KEY || true) {
-      console.log('Using mock data for stocks');
-      const mockStocks = [
-        { symbol: "AAPL", name: "Apple Inc.", price: 175.45, change: 2.34, close: 175.45, volume: "45234567" },
-        { symbol: "MSFT", name: "Microsoft Corporation", price: 378.92, change: -1.23, close: 378.92, volume: "23456789" },
-        { symbol: "GOOGL", name: "Alphabet Inc.", price: 134.87, change: 0.95, close: 134.87, volume: "34567890" },
-        { symbol: "AMZN", name: "Amazon.com Inc.", price: 145.32, change: 3.21, close: 145.32, volume: "56789012" },
-        { symbol: "NVDA", name: "NVIDIA Corporation", price: 785.43, change: 15.67, close: 785.43, volume: "67890123" }
-      ];
-      
-      return new Response(
-        JSON.stringify({ stocks: mockStocks }),
-        { 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json' 
-          } 
-        }
-      );
+    const ALPHA_VANTAGE_KEY = Deno.env.get('ALPHA_VANTAGE_API_KEY');
+    if (!ALPHA_VANTAGE_KEY) {
+      throw new Error('Alpha Vantage API key not configured');
     }
 
-    console.log('Fetching stock data from Polygon API...');
+    console.log('Fetching stock data from Alpha Vantage API...');
 
-    // Initialize Polygon client
-    const rest = restClient(API_KEY, 'https://api.polygon.io');
-
-    // Limit to top 25 stocks to avoid timeouts
+    // Top stocks to fetch
     const popularTickers = [
       'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'NFLX',
       'AMD', 'CRM', 'ORCL', 'ADBE', 'INTC', 'IBM', 'CSCO', 'JPM',
@@ -48,49 +27,37 @@ serve(async (req) => {
     ];
 
     const stocks = [];
-    
-    // Get previous trading day - try multiple days back if needed
-    const getPreviousTradingDay = (daysBack = 1) => {
-      const date = new Date();
-      date.setDate(date.getDate() - daysBack);
-      // If it's weekend, go back to Friday
-      while (date.getDay() === 0 || date.getDay() === 6) {
-        date.setDate(date.getDate() - 1);
-      }
-      return date.toISOString().split('T')[0];
-    };
-
-    // Try multiple days to find data
-    let tradingDay = getPreviousTradingDay(1);
-    console.log(`Attempting to get stock data for ${tradingDay}`);
 
     // Fetch all stocks in parallel with timeout
     const fetchPromises = popularTickers.map(async (ticker) => {
       try {
+        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_KEY}`;
+        
         const response = await Promise.race([
-          rest.getStocksOpenClose({
-            stocksTicker: ticker,
-            date: tradingDay,
-            adjusted: "true"
-          }),
+          fetch(url),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 3000)
+            setTimeout(() => reject(new Error('Timeout')), 5000)
           )
-        ]);
+        ]) as Response;
 
-        if (response && response.close) {
-          const change = response.open ? ((response.close - response.open) / response.open) * 100 : 0;
+        const data = await response.json();
+        const quote = data['Global Quote'];
+        
+        if (quote && quote['05. price']) {
+          const price = parseFloat(quote['05. price']);
+          const change = parseFloat(quote['09. change']);
+          const changePercent = parseFloat(quote['10. change percent']?.replace('%', '') || '0');
           
           return {
             symbol: ticker,
             name: `${ticker} Corporation`,
-            price: parseFloat(response.close.toFixed(2)),
-            close: parseFloat(response.close.toFixed(2)),
-            change: parseFloat(change.toFixed(2)),
-            volume: response.volume?.toString() || '0',
-            open: response.open || 0,
-            high: response.high || 0,
-            low: response.low || 0
+            price: parseFloat(price.toFixed(2)),
+            close: parseFloat(price.toFixed(2)),
+            change: parseFloat(changePercent.toFixed(2)),
+            volume: quote['06. volume'] || '0',
+            open: parseFloat(quote['02. open'] || price),
+            high: parseFloat(quote['03. high'] || price),
+            low: parseFloat(quote['04. low'] || price)
           };
         }
         
