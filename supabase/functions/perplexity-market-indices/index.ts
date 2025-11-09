@@ -45,13 +45,16 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('Perplexity response:', JSON.stringify(data));
+    console.log('Perplexity raw response:', JSON.stringify(data));
     
     let content = data.choices?.[0]?.message?.content;
     
     if (!content) {
+      console.error('No content in Perplexity response');
       throw new Error('No content in Perplexity response');
     }
+
+    console.log('Perplexity content before cleaning:', content);
 
     // Clean up the response - remove markdown code blocks if present
     content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
@@ -59,6 +62,7 @@ serve(async (req) => {
     // Extract just the JSON object - look for the first { and find its matching }
     const firstBrace = content.indexOf('{');
     if (firstBrace === -1) {
+      console.error('No JSON object found in content:', content);
       throw new Error('No JSON object found in response');
     }
     
@@ -75,19 +79,15 @@ serve(async (req) => {
     }
     
     const jsonString = content.substring(firstBrace, jsonEnd);
+    console.log('Extracted JSON string:', jsonString);
     
     // Parse the JSON response
-    let marketData;
-    try {
-      marketData = JSON.parse(jsonString);
-    } catch (parseError) {
-      console.error('Failed to parse Perplexity response:', jsonString);
-      // Return fallback data if parsing fails
-      marketData = {
-        sp500: { value: "5,234.18", change: 0.5 },
-        dowJones: { value: "42,863.86", change: 0.3 },
-        nasdaq: { value: "18,342.94", change: 0.8 }
-      };
+    const marketData = JSON.parse(jsonString);
+    
+    // Validate the response has all required fields
+    if (!marketData.sp500 || !marketData.dowJones || !marketData.nasdaq) {
+      console.error('Missing required fields in market data:', marketData);
+      throw new Error('Invalid market data structure');
     }
 
     console.log('Successfully fetched market indices from Perplexity');
@@ -99,11 +99,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in perplexity-market-indices function:', error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      // Return fallback data on error
-      sp500: { value: "5,234.18", change: 0.5 },
-      dowJones: { value: "42,863.86", change: 0.3 },
-      nasdaq: { value: "18,342.94", change: 0.8 }
+      error: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
