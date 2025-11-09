@@ -8,9 +8,11 @@ import { TrendingUp, TrendingDown, DollarSign, Lightbulb, Menu, X } from "lucide
 import { useFinsights } from "@/contexts/FinsightsContext";
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { polygonService } from "@/services/polygonService";
 
 const Home = () => {
+  const navigate = useNavigate();
   const { finsights, removeFromFinsights } = useFinsights();
   const { portfolio, getTotalValue, getTotalChange } = usePortfolio();
   const [liveQuotes, setLiveQuotes] = useState<Record<string, { price: number; change: number }>>({});
@@ -139,7 +141,10 @@ const Home = () => {
             {portfolio.length === 0 ? (
               <div className="text-center py-8">
                 <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Add stocks to your portfolio to track your investments!</p>
+                <p className="text-muted-foreground mb-4">Add stocks to your portfolio to track your investments!</p>
+                <Button onClick={() => navigate('/portfolio')} variant="default" size="sm">
+                  Add to Portfolio
+                </Button>
               </div>
             ) : (
               portfolio.map((stock) => (
@@ -187,7 +192,10 @@ const Home = () => {
             {finsights.length === 0 ? (
               <div className="text-center py-8">
                 <Lightbulb className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Complete the recommendation quiz to get your personalized finsights!</p>
+                <p className="text-muted-foreground mb-4">Complete the recommendation quiz to get your personalized finsights!</p>
+                <Button onClick={() => navigate('/recommend')} variant="default" size="sm">
+                  Take Recommendation Quiz
+                </Button>
               </div>
             ) : (
               finsights.map((stock, index) => (
