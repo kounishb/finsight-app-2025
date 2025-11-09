@@ -16,7 +16,21 @@ serve(async (req) => {
 
   try {
     const { surveyData } = await req.json();
-    console.log('Generating recommendations for survey data:', surveyData);
+    console.log('Generating recommendations for survey data');
+
+    if (!surveyData || typeof surveyData !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Survey data is required and must be an object' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize survey data - ensure strings are trimmed and limited in length
+    const sanitize = (val: any): string => {
+      if (typeof val === 'string') return val.trim().substring(0, 500);
+      if (Array.isArray(val)) return val.map(v => String(v).trim().substring(0, 100)).join(', ');
+      return String(val).substring(0, 500);
+    };
 
     if (!openAIApiKey) {
       console.error('OpenAI API key not found');
@@ -27,14 +41,14 @@ serve(async (req) => {
     const prompt = `Based on the following investment profile, recommend 5 specific stocks with detailed explanations:
 
 User Profile:
-- Age: ${surveyData.age}
-- Investment Experience: ${surveyData.experience}
-- Risk Tolerance: ${surveyData.riskTolerance}
-- Investment Goals: ${surveyData.goals.join(', ')}
-- Time Horizon: ${surveyData.timeHorizon}
-- Investment Amount: ${surveyData.investmentAmount}
-- Interested Sectors: ${surveyData.sectors.join(', ')}
-- Investment Style: ${surveyData.investmentStyle}
+- Age: ${sanitize(surveyData.age)}
+- Investment Experience: ${sanitize(surveyData.experience)}
+- Risk Tolerance: ${sanitize(surveyData.riskTolerance)}
+- Investment Goals: ${sanitize(surveyData.goals)}
+- Time Horizon: ${sanitize(surveyData.timeHorizon)}
+- Investment Amount: ${sanitize(surveyData.investmentAmount)}
+- Interested Sectors: ${sanitize(surveyData.sectors)}
+- Investment Style: ${sanitize(surveyData.investmentStyle)}
 
 For each stock recommendation, provide:
 1. Stock symbol (e.g., AAPL)

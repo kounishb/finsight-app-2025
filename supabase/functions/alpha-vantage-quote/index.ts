@@ -17,13 +17,24 @@ serve(async (req) => {
       throw new Error('Symbol is required');
     }
 
+    // Validate symbol format
+    const symbolRegex = /^[A-Z]{1,5}$/;
+    const cleanSymbol = symbol.toString().trim().toUpperCase();
+    
+    if (!symbolRegex.test(cleanSymbol)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid symbol format. Must be 1-5 uppercase letters.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const API_KEY = Deno.env.get('ALPHA_VANTAGE_API_KEY');
     if (!API_KEY) {
       throw new Error('Alpha Vantage API key not configured');
     }
 
     // Get real-time quote
-    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`;
+    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(cleanSymbol)}&apikey=${API_KEY}`;
     const quoteResponse = await fetch(quoteUrl);
     
     if (!quoteResponse.ok) {

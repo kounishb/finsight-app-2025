@@ -17,6 +17,17 @@ serve(async (req) => {
       throw new Error('Symbol is required');
     }
 
+    // Validate symbol format
+    const symbolRegex = /^[A-Z]{1,5}$/;
+    const cleanSymbol = symbol.toString().trim().toUpperCase();
+    
+    if (!symbolRegex.test(cleanSymbol)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid symbol format. Must be 1-5 uppercase letters.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const API_KEY = Deno.env.get('FINNHUB_API_KEY');
     if (!API_KEY) {
       throw new Error('Finnhub API key not configured');
@@ -24,8 +35,8 @@ serve(async (req) => {
 
     // Get real-time quote and company profile
     const [quoteResponse, profileResponse] = await Promise.all([
-      fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${API_KEY}`),
-      fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${API_KEY}`)
+      fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(cleanSymbol)}&token=${API_KEY}`),
+      fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(cleanSymbol)}&token=${API_KEY}`)
     ]);
     
     if (!quoteResponse.ok || !profileResponse.ok) {
