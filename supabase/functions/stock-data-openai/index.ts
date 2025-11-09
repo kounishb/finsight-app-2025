@@ -33,22 +33,19 @@ serve(async (req) => {
     } else if (!symbol) {
       throw new Error('Symbol is required');
     } else if (type === 'company-description') {
-      prompt = `Write a comprehensive company description for ${symbol}. This should be 4-5 detailed paragraphs covering:
-      1. Company overview, founding, and core business
-      2. Main products/services and market position
-      3. Key competitive advantages and market presence
-      4. Recent developments and strategic initiatives
-      5. Future outlook and growth prospects
+      prompt = `Write a concise company description for ${symbol}. This should be exactly 3 paragraphs covering:
+      1. Company overview, founding, core business, and main products/services
+      2. Market position, competitive advantages, and key developments
+      3. Future outlook and growth prospects
       
-      Make it informative and professional, suitable for investment research. Focus on factual business information.`;
+      Keep each paragraph focused and informative. Aim for 3-4 sentences per paragraph.`;
     } else if (type === 'recommendation') {
-      prompt = `Write a detailed investment recommendation analysis for ${symbol}. This should be 3-4 paragraphs covering:
-      1. Why this stock aligns with different investor profiles (risk tolerance, investment goals)
-      2. Key strengths and growth drivers
-      3. Investment themes and market opportunities
-      4. Suitability for different investment strategies
+      prompt = `Write a detailed investment recommendation analysis for ${symbol}. This should be exactly 3 paragraphs covering:
+      1. Why this stock aligns with different investor profiles and investment goals
+      2. Key strengths, growth drivers, and investment themes
+      3. Market opportunities and suitability for different investment strategies
       
-      Make it comprehensive and analytical, suitable for investment decision-making.`;
+      Keep each paragraph substantive and analytical. Aim for 4-5 sentences per paragraph.`;
     } else if (type === 'stock-metrics') {
       prompt = `Provide realistic current market data for ${symbol} in this exact JSON format:
       {
