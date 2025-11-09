@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.stock-data-openai]
 verify_jwt = false
+
+[functions.perplexity-stock-metrics]
+verify_jwt = false

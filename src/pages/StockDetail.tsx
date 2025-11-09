@@ -84,10 +84,10 @@ const StockDetail = () => {
           timeout(10000)
         ]),
         Promise.race([
-          supabase.functions.invoke('stock-data-openai', {
-            body: { symbol: stockSymbol, type: 'stock-metrics' }
+          supabase.functions.invoke('perplexity-stock-metrics', {
+            body: { symbol: stockSymbol }
           }),
-          timeout(10000)
+          timeout(15000) // 15 second timeout for Perplexity
         ])
       ]);
 
