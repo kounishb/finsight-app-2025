@@ -166,74 +166,67 @@ const LiveStocks = () => {
         <p className="text-muted-foreground mt-1">Real-time market data</p>
       </div>
 
-      {/* Market Indices */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Market Overview</h2>
-        <div className="grid grid-cols-3 gap-3">
-          {indicesLoading ? (
-            <Card className="col-span-3 p-4 bg-gradient-to-br from-card to-card/80 border-border/50">
-              <div className="flex items-center justify-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">Loading market overview data...</span>
-              </div>
-            </Card>
-          ) : (
-            marketIndices.map((index) => (
-              <Card key={index.name} className="p-3 bg-gradient-to-br from-card to-card/80 border-border/50">
-                <div className="text-xs text-muted-foreground mb-1">{index.name}</div>
-                <div className="font-bold text-sm">{index.value}</div>
-                {index.value !== "Error" && index.value !== "Loading..." && (
-                  <div className={`text-xs flex items-center gap-1 ${
-                    index.change >= 0 ? 'text-success' : 'text-danger'
-                  }`}>
-                    {index.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    {index.change >= 0 ? '+' : ''}{index.change}%
-                  </div>
-                )}
-              </Card>
-            ))
-          )}
+      {(indicesLoading || loading) ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-muted-foreground">Loading Live Stocks...</span>
         </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search stocks..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <div className="flex gap-2 flex-wrap items-center justify-between">
-          <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-            <SelectTrigger className="w-[200px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Sort by..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="alphabetical">Alphabetical</SelectItem>
-              <SelectItem value="price-high">Highest Price</SelectItem>
-              <SelectItem value="price-low">Lowest Price</SelectItem>
-              <SelectItem value="increase-high">Highest Increase</SelectItem>
-              <SelectItem value="decrease-high">Highest Decrease</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Stock List */}
-      <div className="space-y-3">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-muted-foreground">Loading latest stock data...</span>
+      ) : (
+        <>
+          {/* Market Indices */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3">Market Overview</h2>
+            <div className="grid grid-cols-3 gap-3">
+              {marketIndices.map((index) => (
+                <Card key={index.name} className="p-3 bg-gradient-to-br from-card to-card/80 border-border/50">
+                  <div className="text-xs text-muted-foreground mb-1">{index.name}</div>
+                  <div className="font-bold text-sm">{index.value}</div>
+                  {index.value !== "Error" && index.value !== "Loading..." && (
+                    <div className={`text-xs flex items-center gap-1 ${
+                      index.change >= 0 ? 'text-success' : 'text-danger'
+                    }`}>
+                      {index.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {index.change >= 0 ? '+' : ''}{index.change}%
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
           </div>
-        ) : pagedStocks.map((stock, index) => (
-          <Card 
+
+          {/* Search and Filters */}
+          <div className="mb-6 space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search stocks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="flex gap-2 flex-wrap items-center justify-between">
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger className="w-[200px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Sort by..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alphabetical">Alphabetical</SelectItem>
+                  <SelectItem value="price-high">Highest Price</SelectItem>
+                  <SelectItem value="price-low">Lowest Price</SelectItem>
+                  <SelectItem value="increase-high">Highest Increase</SelectItem>
+                  <SelectItem value="decrease-high">Highest Decrease</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Stock List */}
+          <div className="space-y-3">
+            {pagedStocks.map((stock, index) => (
+              <Card
             key={`${stock.symbol}-${index}`} 
             className="p-4 bg-gradient-to-br from-card to-card/80 border-border/50 hover:bg-accent/20 transition-colors cursor-pointer"
             onClick={() => navigate(`/stock/${stock.symbol}`, { state: { fromLiveStocks: true } })}
@@ -263,28 +256,26 @@ const LiveStocks = () => {
                 
               </div>
             </div>
-          </Card>
-        ))}
-      </div>
+              </Card>
+            ))}
+          </div>
 
-      
-
-        {!loading && noResults && (
+          {noResults && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">
               No stocks found for "{searchTerm}". The stock may not exist in our database.
             </p>
-          </div>
-        )}
-      
-      {!loading && !hasSearchTerm && filteredStocks.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">No stocks found matching your criteria</p>
-        </div>
-      )}
+            </div>
+          )}
+          
+          {!hasSearchTerm && filteredStocks.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No stocks found matching your criteria</p>
+            </div>
+          )}
 
-      {/* Pagination at bottom */}
-      {!loading && filteredStocks.length > 0 && (
+          {/* Pagination at bottom */}
+          {filteredStocks.length > 0 && (
         <div className="mt-6 pb-4">
           <Pagination>
             <PaginationContent>
@@ -316,6 +307,8 @@ const LiveStocks = () => {
             </PaginationContent>
           </Pagination>
         </div>
+          )}
+        </>
       )}
     </div>
   );
