@@ -56,26 +56,39 @@ serve(async (req) => {
       while (date.getDay() === 0 || date.getDay() === 6) {
         date.setDate(date.getDate() - 1);
       }
-      return date.toISOString().split('T')[0];
+      // Format as YYYY-MM-DD
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     };
 
-    // Try multiple days to find data
+    // Get the most recent trading day (yesterday or last Friday if weekend)
+    const today = new Date();
     let tradingDay = getPreviousTradingDay(1);
+    
+    // If today is Monday, go back to Friday (3 days)
+    if (today.getDay() === 1) {
+      tradingDay = getPreviousTradingDay(3);
+    }
+    // If today is Sunday, go back to Friday (2 days) 
+    else if (today.getDay() === 0) {
+      tradingDay = getPreviousTradingDay(2);
+    }
+    
     console.log(`Attempting to get stock data for ${tradingDay}`);
 
     // Fetch all stocks in parallel with timeout
     const fetchPromises = popularTickers.map(async (ticker) => {
       try {
+        console.log(`Fetching ${ticker} for date ${tradingDay}`);
+        
         const response = await Promise.race([
-          rest.getStocksOpenClose({
-            stocksTicker: ticker,
-            date: tradingDay,
-            adjusted: "true"
-          }),
+          rest.stocks.dailyOpenClose(ticker, tradingDay),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 3000)
+            setTimeout(() => reject(new Error('Timeout')), 5000)
           )
-        ]);
+        ]) as any;
 
         if (response && response.close) {
           const change = response.open ? ((response.close - response.open) / response.open) * 100 : 0;
