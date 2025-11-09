@@ -18,6 +18,7 @@ import Articles from "./pages/Articles";
 import Videos from "./pages/Videos";
 import StockDetail from "./pages/StockDetail";
 import SignIn from "./pages/SignIn";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ const RouterWithLoader = () => {
         <Route path="/articles" element={<Articles />} />
         <Route path="/videos" element={<Videos />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
