@@ -29,12 +29,16 @@ serve(async (req) => {
         model: 'sonar',
         messages: [
           {
+            role: 'system',
+            content: 'You are a financial data API. Always return valid JSON with real numeric values.'
+          },
+          {
             role: 'user',
-            content: 'You are a financial data API. Search the web RIGHT NOW for the CURRENT LIVE closing prices and today\'s percentage changes for these market indices:\n\n1. S&P 500 Index (^GSPC)\n2. Dow Jones Industrial Average (^DJI)\n3. Nasdaq Composite (^IXIC)\n\nSearch REAL-TIME data from Yahoo Finance, Google Finance, Bloomberg, or MarketWatch.\n\nYou MUST return ONLY valid JSON with ACTUAL REAL NUMBERS - NO PLACEHOLDERS like "X" or "XX,XXX".\n\nExample of CORRECT format (but use TODAY\'S ACTUAL values):\n{"sp500": {"value": "6,234.56", "change": 1.23}, "dowJones": {"value": "43,567.89", "change": -0.45}, "nasdaq": {"value": "19,876.54", "change": 2.10}}\n\nReturn ONLY the JSON object with today\'s ACTUAL numeric values. No explanations, no placeholders, just real data.'
+            content: 'Search Yahoo Finance, Google Finance, or MarketWatch for today\'s closing values.\n\nFind these 3 indices:\n- S&P 500 (around 6,000-7,000 points)\n- Dow Jones Industrial Average (around 43,000-46,000 points)  \n- Nasdaq Composite (around 18,000-21,000 points)\n\nFor EACH index find: current price and today\'s percentage change.\n\nReturn this exact JSON format with REAL numbers:\n{"sp500": {"value": "6,234.56", "change": 1.23}, "dowJones": {"value": "43,567.89", "change": -0.45}, "nasdaq": {"value": "19,876.54", "change": 2.10}}\n\nUse commas in values. Return ONLY JSON, nothing else.'
           }
         ],
-        temperature: 0.0,
-        max_tokens: 400,
+        temperature: 0.2,
+        max_tokens: 500,
       }),
     });
 
