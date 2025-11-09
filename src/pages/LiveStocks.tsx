@@ -23,19 +23,26 @@ const LiveStocks = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [marketIndices, setMarketIndices] = useState([
-    { name: "S&P 500", value: "4,567.89", change: 0.7 },
-    { name: "Dow Jones", value: "35,432.10", change: -0.3 },
-    { name: "Nasdaq", value: "14,123.45", change: 1.2 }
+    { name: "S&P 500", value: "Loading...", change: 0 },
+    { name: "Dow Jones", value: "Loading...", change: 0 },
+    { name: "Nasdaq", value: "Loading...", change: 0 }
   ]);
+  const [indicesLoading, setIndicesLoading] = useState(true);
 
-  // Fetch market overview data from Perplexity
+  // Fetch market overview data from Perplexity - always fetches fresh data
   const fetchMarketOverview = async () => {
+    console.log('Fetching fresh market indices from Perplexity...');
+    setIndicesLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('perplexity-market-indices');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Perplexity market indices error:', error);
+        throw error;
+      }
       
       if (data) {
+        console.log('Received market indices data:', data);
         setMarketIndices([
           { name: "S&P 500", value: data.sp500.value, change: data.sp500.change },
           { name: "Dow Jones", value: data.dowJones.value, change: data.dowJones.change },
@@ -44,6 +51,14 @@ const LiveStocks = () => {
       }
     } catch (error) {
       console.error('Error fetching market overview:', error);
+      // On error, show error message instead of old values
+      setMarketIndices([
+        { name: "S&P 500", value: "Error", change: 0 },
+        { name: "Dow Jones", value: "Error", change: 0 },
+        { name: "Nasdaq", value: "Error", change: 0 }
+      ]);
+    } finally {
+      setIndicesLoading(false);
     }
   };
 
@@ -155,18 +170,29 @@ const LiveStocks = () => {
       <div className="mb-6">
         <h2 className="text-lg font-semibold mb-3">Market Overview</h2>
         <div className="grid grid-cols-3 gap-3">
-          {marketIndices.map((index) => (
-            <Card key={index.name} className="p-3 bg-gradient-to-br from-card to-card/80 border-border/50">
-              <div className="text-xs text-muted-foreground mb-1">{index.name}</div>
-              <div className="font-bold text-sm">{index.value}</div>
-              <div className={`text-xs flex items-center gap-1 ${
-                index.change >= 0 ? 'text-success' : 'text-danger'
-              }`}>
-                {index.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {index.change >= 0 ? '+' : ''}{index.change}%
+          {indicesLoading ? (
+            <Card className="col-span-3 p-4 bg-gradient-to-br from-card to-card/80 border-border/50">
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">Loading latest market data from Perplexity...</span>
               </div>
             </Card>
-          ))}
+          ) : (
+            marketIndices.map((index) => (
+              <Card key={index.name} className="p-3 bg-gradient-to-br from-card to-card/80 border-border/50">
+                <div className="text-xs text-muted-foreground mb-1">{index.name}</div>
+                <div className="font-bold text-sm">{index.value}</div>
+                {index.value !== "Error" && index.value !== "Loading..." && (
+                  <div className={`text-xs flex items-center gap-1 ${
+                    index.change >= 0 ? 'text-success' : 'text-danger'
+                  }`}>
+                    {index.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                    {index.change >= 0 ? '+' : ''}{index.change}%
+                  </div>
+                )}
+              </Card>
+            ))
+          )}
         </div>
       </div>
 
