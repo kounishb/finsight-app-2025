@@ -13,8 +13,9 @@ serve(async (req) => {
 
   try {
     const API_KEY = Deno.env.get('POLYGON_API_KEY');
-    if (!API_KEY) {
-      console.log('Polygon API key not configured, returning mock data');
+    // Temporarily use mock data due to API issues
+    if (!API_KEY || true) {
+      console.log('Using mock data for stocks');
       const mockStocks = [
         { symbol: "AAPL", name: "Apple Inc.", price: 175.45, change: 2.34, close: 175.45, volume: "45234567" },
         { symbol: "MSFT", name: "Microsoft Corporation", price: 378.92, change: -1.23, close: 378.92, volume: "23456789" },
