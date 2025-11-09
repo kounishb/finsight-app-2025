@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Link } from "react-router-dom";
 
 const PrivacyPolicy = () => {
   return (
@@ -97,12 +98,12 @@ const PrivacyPolicy = () => {
                   </ul>
                   <p className="text-muted-foreground mt-4">
                     To request account deletion, please visit our{' '}
-                    <a 
-                      href="/delete-account" 
+                    <Link 
+                      to="/delete-account" 
                       className="text-primary hover:underline font-medium"
                     >
                       Account Deletion page
-                    </a>
+                    </Link>
                     {' '}for detailed instructions.
                   </p>
                 </section>
