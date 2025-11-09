@@ -58,43 +58,43 @@ port = 54321
 enabled = false
 
 [functions.alpha-vantage-nasdaq]
-verify_jwt = true
+verify_jwt = false
 
 [functions.alpha-vantage-news]
-verify_jwt = true
+verify_jwt = false
 
 [functions.alpha-vantage-quote]
-verify_jwt = true
+verify_jwt = false
 
 [functions.alpha-vantage-stocks]
-verify_jwt = true
+verify_jwt = false
 
 [functions.finnhub-news]
-verify_jwt = true
+verify_jwt = false
 
 [functions.finnhub-quote]
-verify_jwt = true
+verify_jwt = false
 
 [functions.finnhub-stocks]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-recommendations]
-verify_jwt = true
+verify_jwt = false
 
 [functions.marketaux-news]
-verify_jwt = true
+verify_jwt = false
 
 [functions.perplexity-market-indices]
-verify_jwt = true
+verify_jwt = false
 
 [functions.polygon-news]
-verify_jwt = true
+verify_jwt = false
 
 [functions.polygon-stocks]
-verify_jwt = true
+verify_jwt = false
 
 [functions.stock-data-openai]
-verify_jwt = true
+verify_jwt = false
 
 [functions.perplexity-stock-metrics]
-verify_jwt = true
+verify_jwt = false

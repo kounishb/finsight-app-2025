@@ -1,17 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-
-const tickersSchema = z.array(
-  z.string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z]{1,5}$/, 'Invalid ticker format')
-).max(10, 'Maximum 10 tickers allowed').optional()
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,9 +14,6 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { tickers = [] } = body;
 
-    // Validate tickers input
-    const validatedTickers = tickersSchema.parse(tickers.length > 0 ? tickers : undefined);
-
     const API_KEY = Deno.env.get('FINNHUB_API_KEY');
     if (!API_KEY) {
       throw new Error('Finnhub API key not configured');
@@ -32,12 +21,12 @@ serve(async (req) => {
 
     let newsData = [];
 
-    if (validatedTickers && validatedTickers.length > 0) {
+    if (tickers.length > 0) {
       // Get company-specific news for each ticker
       const to = new Date().toISOString().split('T')[0];
       const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Last 7 days
       
-      const newsPromises = validatedTickers.map(async (ticker: string) => {
+      const newsPromises = tickers.slice(0, 10).map(async (ticker: string) => {
         try {
           const response = await fetch(
             `https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${from}&to=${to}&token=${API_KEY}`

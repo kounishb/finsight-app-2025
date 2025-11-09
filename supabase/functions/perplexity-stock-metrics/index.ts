@@ -1,16 +1,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const symbolSchema = z.string()
-  .trim()
-  .toUpperCase()
-  .regex(/^[A-Z]{1,5}$/, 'Invalid stock symbol format');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -20,15 +14,16 @@ serve(async (req) => {
   try {
     const { symbol } = await req.json();
     
-    // Validate symbol input
-    const validatedSymbol = symbolSchema.parse(symbol);
+    if (!symbol) {
+      throw new Error('Symbol is required');
+    }
 
     const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
     if (!PERPLEXITY_API_KEY) {
       throw new Error('Perplexity API key not configured');
     }
 
-    console.log(`Fetching real-time metrics for ${validatedSymbol}`);
+    console.log(`Fetching real-time metrics for ${symbol}`);
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -41,7 +36,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'user',
-            content: `Search the web RIGHT NOW for the latest real-time stock data for ${validatedSymbol}. Find the most current information from Yahoo Finance, Google Finance, Bloomberg, or MarketWatch.
+            content: `Search the web RIGHT NOW for the latest real-time stock data for ${symbol}. Find the most current information from Yahoo Finance, Google Finance, Bloomberg, or MarketWatch.
 
 Return ONLY this exact JSON format with the ACTUAL CURRENT values:
 {
@@ -70,7 +65,7 @@ IMPORTANT:
 
     const data = await response.json();
     const content = data.choices[0].message.content;
-    console.log(`Perplexity response for ${validatedSymbol}:`, content);
+    console.log(`Perplexity response for ${symbol}:`, content);
 
     let result;
     try {

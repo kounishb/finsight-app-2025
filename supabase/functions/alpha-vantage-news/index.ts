@@ -1,17 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-
-const tickersSchema = z.array(
-  z.string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z]{1,5}$/, 'Invalid ticker format')
-).max(10, 'Maximum 10 tickers allowed').optional()
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,9 +14,6 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { tickers = [] } = body;
 
-    // Validate tickers input
-    const validatedTickers = tickersSchema.parse(tickers.length > 0 ? tickers : undefined);
-
     const API_KEY = Deno.env.get('ALPHA_VANTAGE_API_KEY');
     if (!API_KEY) {
       throw new Error('Alpha Vantage API key not configured');
@@ -34,9 +23,9 @@ serve(async (req) => {
     let newsUrl = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&apikey=${API_KEY}&limit=50&sort=LATEST`;
     
     // Add specific tickers if provided
-    if (validatedTickers && validatedTickers.length > 0) {
-      const tickerString = validatedTickers.join(',');
-      newsUrl += `&tickers=${encodeURIComponent(tickerString)}`;
+    if (tickers.length > 0) {
+      const tickerString = tickers.join(',');
+      newsUrl += `&tickers=${tickerString}`;
     } else {
       // Get general market news with popular topics
       newsUrl += '&topics=financial_markets,earnings,ipo,mergers_and_acquisitions,technology,economy_fiscal_policy';

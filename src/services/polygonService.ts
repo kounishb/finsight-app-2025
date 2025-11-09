@@ -37,8 +37,10 @@ class PolygonService {
   private readonly localStorageKey = 'polygon_all_stocks_cache_v1';
 
   constructor() {
-    // Polygon API key is now managed server-side for security
-    this.apiKey = '';
+    this.apiKey = import.meta.env.VITE_POLYGON_API_KEY || '';
+    if (!this.apiKey) {
+      console.warn('Polygon API key not found in environment variables');
+    }
   }
 
   private getPreviousBusinessDay(): string {
@@ -122,20 +124,32 @@ class PolygonService {
   }
 
   private async fetchGroupedByDate(date: string): Promise<PolygonStock[]> {
-    const { supabase } = await import('@/integrations/supabase/client');
-    const { data, error } = await supabase.functions.invoke('polygon-stocks', {
-      body: {}
+    const url = `${this.baseUrl}/aggs/grouped/locale/us/market/stocks/${date}?adjusted=true&apiKey=${this.apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Polygon API error: ${response.status} ${response.statusText}`);
+    }
+    const data: PolygonApiResponse = await response.json();
+    if (data.status !== 'OK' || !data.results) {
+      throw new Error('Invalid response from Polygon API');
+    }
+    const stocks: PolygonStock[] = data.results.map(result => {
+      const changeAmount = result.c - result.o;
+      const changePercent = ((changeAmount / result.o) * 100);
+      return {
+        symbol: result.T,
+        name: result.T,
+        price: result.c,
+        change: changePercent,
+        changePercent: changePercent,
+        volume: result.v,
+        close: result.c,
+        open: result.o,
+        high: result.h,
+        low: result.l
+      };
     });
-    
-    if (error) {
-      throw new Error(`Edge function error: ${error.message}`);
-    }
-    
-    if (!data || !data.stocks || !Array.isArray(data.stocks)) {
-      throw new Error('Invalid response from edge function');
-    }
-    
-    return data.stocks.filter((stock: PolygonStock) => stock.price > 1);
+    return stocks.filter(stock => stock.price > 1);
   }
 
   async getAllStocks(): Promise<PolygonStock[]> {
@@ -177,27 +191,36 @@ class PolygonService {
 
   async getStockQuote(symbol: string): Promise<PolygonStock | null> {
     try {
-      // Use alpha-vantage or finnhub edge functions instead
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.functions.invoke('alpha-vantage-quote', {
-        body: { symbol }
-      });
+      const date = this.getPreviousBusinessDay();
+      const url = `${this.baseUrl}/aggs/ticker/${symbol}/range/1/day/${date}/${date}?adjusted=true&apiKey=${this.apiKey}`;
       
-      if (error || !data?.stock) {
-        return null;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Polygon API error: ${response.status} ${response.statusText}`);
       }
       
+      const data = await response.json();
+      
+      if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+        return null;
+      }
+
+      const result = data.results[0];
+      const changeAmount = result.c - result.o;
+      const changePercent = ((changeAmount / result.o) * 100);
+      
       return {
-        symbol: data.stock.symbol,
-        name: data.stock.name,
-        price: data.stock.price,
-        change: data.stock.change,
-        changePercent: data.stock.change,
-        volume: parseInt(data.stock.volume) || 0,
-        close: data.stock.price,
-        open: data.stock.price,
-        high: data.stock.price,
-        low: data.stock.price
+        symbol: symbol,
+        name: symbol,
+        price: result.c,
+        change: changePercent,
+        changePercent: changePercent,
+        volume: result.v,
+        close: result.c,
+        open: result.o,
+        high: result.h,
+        low: result.l
       };
       
     } catch (error) {
@@ -208,17 +231,18 @@ class PolygonService {
 
   async getRealtimeQuote(symbol: string): Promise<{ price: number } | null> {
     try {
-      // Use finnhub edge function instead for real-time quotes
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.functions.invoke('finnhub-quote', {
-        body: { symbol }
-      });
-      
-      if (error || !data?.stock?.price) {
-        return null;
+      const url = `${this.baseUrl}/last/trade/${symbol}?apiKey=${this.apiKey}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Polygon realtime API error: ${response.status} ${response.statusText}`);
       }
-      
-      return { price: data.stock.price };
+      const data = await response.json();
+      // Expected shape: { status: 'success', symbol: 'AAPL', last: { price: number, ... } }
+      const price = data?.last?.price ?? data?.price ?? null;
+      if (typeof price === 'number' && price > 0) {
+        return { price };
+      }
+      return null;
     } catch (error) {
       console.error(`Error fetching realtime quote for ${symbol}:`, error);
       return null;
